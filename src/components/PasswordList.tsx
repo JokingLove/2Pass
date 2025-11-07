@@ -56,7 +56,8 @@ function SortablePasswordCard({
   } = useSortable({ id: entry.id });
 
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
-
+  // 添加初始鼠标位置状态，用于区分拖动和长按
+  const [initialMousePos, setInitialMousePos] = useState<{ x: number; y: number } | null>(null);
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -67,14 +68,36 @@ function SortablePasswordCard({
   };
 
   // 长按事件处理
-  const handleMouseDown = () => {
-    if (isMultiSelectMode) return; // 如果已经在多选模式，不处理长按
+  const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
+    if (isMultiSelectMode) return;
+
+    // 记录初始鼠标位置
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setInitialMousePos({ x: clientX, y: clientY });
 
     const timer = setTimeout(() => {
       onLongPress?.(entry.id);
-    }, 800); // 800ms 长按时间
+    }, 800);
 
     setLongPressTimer(timer);
+  };
+
+  // 添加鼠标移动事件处理，检测拖动行为
+  const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!initialMousePos || !longPressTimer) return;
+
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const distance = Math.sqrt(
+      Math.pow(clientX - initialMousePos.x, 2) + Math.pow(clientY - initialMousePos.y, 2)
+    );
+
+    // 超过8px阈值则判定为拖动，取消长按计时器
+    if (distance >= 8) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
   };
 
   const handleMouseUp = () => {
@@ -82,6 +105,7 @@ function SortablePasswordCard({
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
+    setInitialMousePos(null);
   };
 
   const handleMouseLeave = () => {
@@ -89,6 +113,7 @@ function SortablePasswordCard({
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
+    setInitialMousePos(null);
   };
 
   return (
@@ -99,8 +124,10 @@ function SortablePasswordCard({
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
+      onMouseMove={handleMouseMove}
       onTouchStart={handleMouseDown}
       onTouchEnd={handleMouseUp}
+      onTouchMove={handleMouseMove}
     >
       {isMultiSelectMode && (
         <div className="select-checkbox">
