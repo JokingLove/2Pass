@@ -1,0 +1,227 @@
+.totp-display {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.totp-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.section-label {
+  color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.totp-code-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.totp-code {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: white;
+  font-family: monospace;
+  letter-spacing: 4px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.totp-copy-btn {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+  backdrop-filter: blur(10px);
+}
+
+.totp-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: scale(1.1);
+}
+
+.totp-copy-btn:active {
+  transform: scale(0.95);
+}
+
+.totp-timer {
+  position: relative;
+  height: 13px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.timer-progress {
+  height: 100%;
+  transition: width 1s linear, background-color 0.3s;
+  border-radius: 3px;
+}
+
+.timer-text {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.combined-password-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.combined-label {
+  color: white;
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.combined-password-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 10px 12px;
+  border-radius: 6px;
+}
+
+.combined-code {
+  flex: 1;
+  font-size: 1.1rem;
+  color: #333;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  letter-spacing: 1px;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.combined-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.combined-action-btn {
+  padding: 6px 12px;
+  background: white;
+  color: #667eea;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1.1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.combined-action-btn:hover {
+  background: #f0f0f0;
+  border-color: #667eea;
+  transform: scale(1.1);
+}
+
+.combined-action-btn:active {
+  transform: scale(0.95);
+}
+
+.totp-error {
+  background: #fff5f5;
+  border: 2px solid #fc8181;
+  border-radius: 12px;
+  padding: 24px;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(252, 129, 129, 0.2);
+}
+
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.error-message {
+  color: #c53030;
+}
+
+.error-message strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 8px;
+  color: #9b2c2c;
+  font-weight: 700;
+}
+
+.error-message p {
+  margin: 8px 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #c53030;
+}
+
+.error-message small {
+  display: block;
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #e53e3e;
+}
+
+@media (max-width: 768px) {
+  .combined-code {
+    font-size: 0.95rem;
+  }
+
+  .combined-password-row {
+    flex-wrap: wrap;
+  }
+
+  .combined-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .combined-action-btn {
+    flex: 1;
+  }
+}
+

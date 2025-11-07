@@ -1,0 +1,154 @@
+.generator-view-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.generator-view-header {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.generator-view-header h1 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.generator-view-header p {
+  margin: 0;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.generator-view-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.generator-card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.result-card {
+  background: white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.result-card h2 {
+  margin: 0 0 20px 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.password-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  margin-bottom: 16px;
+}
+
+.result-password {
+  flex: 1;
+  font-size: 1.3rem;
+  color: white;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  word-break: break-all;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.copy-result-btn {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #667eea;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.copy-result-btn:hover {
+  background: white;
+  transform: scale(1.05);
+}
+
+.copy-result-btn:active {
+  transform: scale(0.95);
+}
+
+.result-hint {
+  margin: 0;
+  padding: 16px;
+  background: #fff3cd;
+  border-radius: 8px;
+  color: #856404;
+  font-size: 0.9rem;
+  border-left: 4px solid #ffc107;
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .password-result {
+    flex-direction: column;
+  }
+
+  .result-password {
+    font-size: 1.1rem;
+  }
+
+  .copy-result-btn {
+    width: 100%;
+  }
+}
+

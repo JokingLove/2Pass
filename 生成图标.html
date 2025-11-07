@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>2Pass 图标生成器</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .icon-preview {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+        .icon-size {
+            text-align: center;
+        }
+        .icon-size p {
+            margin: 10px 0 5px 0;
+            color: #666;
+            font-size: 14px;
+        }
+        canvas {
+            border-radius: 20%;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+        .buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .instructions-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 30px;
+            border-left: 4px solid #667eea;
+        }
+        .instructions-box h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .instructions-box code {
+            background: #e3f2fd;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #1976d2;
+            font-family: monospace;
+        }
+        .instructions-box ol {
+            margin: 15px 0;
+            padding-left: 25px;
+        }
+        .instructions-box li {
+            margin: 10px 0;
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 2Pass 应用图标生成器</h1>
+        
+        <div class="icon-preview">
+            <div class="icon-size">
+                <canvas id="icon1024" width="1024" height="1024"></canvas>
+                <p>1024x1024 (主图标)</p>
+            </div>
+        </div>
+
+        <div class="buttons">
+            <button onclick="downloadIcon(1024)">📥 下载 1024x1024</button>
+            <button onclick="downloadIcon(512)">📥 下载 512x512</button>
+            <button onclick="downloadAllSizes()">📦 下载所有尺寸</button>
+        </div>
+
+        <div class="instructions-box">
+            <h3>📝 使用说明：</h3>
+            <ol>
+                <li>点击上方"📥 下载 1024x1024"按钮</li>
+                <li>将下载的图片保存到项目根目录</li>
+                <li>打开终端，在项目目录运行：<br>
+                    <code>pnpm tauri icon 2pass-icon-1024.png</code>
+                </li>
+                <li>重新启动应用：<code>pnpm tauri dev</code></li>
+                <li>图标已自动应用到应用程序！✅</li>
+            </ol>
+            <p style="color: #666; font-size: 14px; margin-top: 15px;">
+                💡 提示：<code>tauri icon</code> 命令会自动生成所有平台需要的图标尺寸
+            </p>
+        </div>
+    </div>
+
+    <script>
+        function drawIcon(canvas, size) {
+            const ctx = canvas.getContext('2d');
+            const scale = size / 1024;
+            const centerX = 512 * scale;
+            const centerY = 512 * scale;
+            
+            // 清空画布
+            ctx.clearRect(0, 0, size, size);
+            
+            // 创建渐变背景
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            
+            // 绘制圆角矩形背景
+            const cornerRadius = 220 * scale;
+            ctx.fillStyle = gradient;
+            roundRect(ctx, 0, 0, size, size, cornerRadius);
+            ctx.fill();
+            
+            // 绘制大圆形背景装饰
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 450 * scale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 绘制 2Pass 文字（主要元素）
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+            ctx.font = `bold ${220 * scale}px -apple-system, BlinkMacSystemFont, sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+            ctx.shadowBlur = 20 * scale;
+            ctx.shadowOffsetY = 8 * scale;
+            ctx.fillText('2Pass', centerX, centerY + 60 * scale);
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            
+            // 绘制简洁的锁图标（小装饰）
+            const lockScale = 0.7;
+            const lockY = centerY - 200 * scale;
+            
+            // 锁身 - 圆角矩形
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+            ctx.shadowBlur = 25 * scale;
+            ctx.shadowOffsetY = 8 * scale;
+            roundRect(ctx, centerX - 80 * scale * lockScale, lockY, 
+                      160 * scale * lockScale, 180 * scale * lockScale, 25 * scale * lockScale);
+            ctx.fill();
+            
+            // 锁的弧形把手
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.lineWidth = 50 * scale * lockScale;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.arc(centerX, lockY, 65 * scale * lockScale, Math.PI * 1.1, Math.PI * 1.9, false);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetY = 0;
+            
+            // 锁孔
+            ctx.fillStyle = '#667eea';
+            ctx.beginPath();
+            ctx.arc(centerX, lockY + 70 * scale * lockScale, 28 * scale * lockScale, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // 锁孔下方的梯形
+            ctx.beginPath();
+            ctx.moveTo(centerX - 15 * scale * lockScale, lockY + 70 * scale * lockScale);
+            ctx.lineTo(centerX - 20 * scale * lockScale, lockY + 130 * scale * lockScale);
+            ctx.lineTo(centerX + 20 * scale * lockScale, lockY + 130 * scale * lockScale);
+            ctx.lineTo(centerX + 15 * scale * lockScale, lockY + 70 * scale * lockScale);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+        
+        // 初始绘制
+        window.onload = function() {
+            drawIcon(document.getElementById('icon1024'), 1024);
+        };
+        
+        function downloadIcon(size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            drawIcon(canvas, size);
+            
+            canvas.toBlob(function(blob) {
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `2pass-icon-${size}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
+        function downloadAllSizes() {
+            const sizes = [1024, 512, 256, 128, 64, 32];
+            sizes.forEach((size, index) => {
+                setTimeout(() => downloadIcon(size), index * 500);
+            });
+            alert('正在下载所有尺寸的图标...\n\n下载完成后，在终端运行：\npnpm tauri icon 2pass-icon-1024.png');
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,555 @@
+import { useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { PasswordListProps, PasswordEntry } from "../types";
+import TotpDisplay from "./TotpDisplay";
+import ConfirmDialog from "./ConfirmDialog";
+import "../styles/PasswordList.css";
+
+interface SortableCardProps {
+  entry: PasswordEntry;
+  showPassword: string | null;
+  copiedId: string | null;
+  isMultiSelectMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: (id: string) => void;
+  onEdit: (entry: PasswordEntry) => void;
+  onConfirmDelete: (entry: PasswordEntry) => void;
+  onTogglePassword: (id: string) => void;
+  onCopyToClipboard: (text: string, id: string) => void;
+  onLongPress?: (id: string) => void;
+}
+
+function SortablePasswordCard({
+  entry,
+  showPassword,
+  copiedId,
+  isMultiSelectMode,
+  isSelected,
+  onToggleSelect,
+  onEdit,
+  onConfirmDelete,
+  onTogglePassword,
+  onCopyToClipboard,
+  onLongPress,
+}: SortableCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: entry.id });
+
+  const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging
+      ? "none"
+      : (transition || "transform 350ms cubic-bezier(0.34, 1.56, 0.64, 1)"),
+    zIndex: isDragging ? 999 : 1,
+  };
+
+  // 长按事件处理
+  const handleMouseDown = () => {
+    if (isMultiSelectMode) return; // 如果已经在多选模式，不处理长按
+
+    const timer = setTimeout(() => {
+      onLongPress?.(entry.id);
+    }, 800); // 800ms 长按时间
+
+    setLongPressTimer(timer);
+  };
+
+  const handleMouseUp = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`entry-card ${isDragging ? "dragging" : ""} ${isSelected ? "selected" : ""}`}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleMouseDown}
+      onTouchEnd={handleMouseUp}
+    >
+      {isMultiSelectMode && (
+        <div className="select-checkbox">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(entry.id)}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+      <div className="entry-header">
+        {!isMultiSelectMode && (
+          <div className="drag-handle" {...attributes} {...listeners} title="按住拖动排序">
+            ⋮⋮
+          </div>
+        )}
+        <h3>{entry.title}</h3>
+        <div className="entry-actions">
+          <button
+            onClick={() => onEdit(entry)}
+            className="action-btn edit-btn"
+            title="编辑"
+          >
+            ✏️
+          </button>
+          <button
+            onClick={() => onConfirmDelete(entry)}
+            className="action-btn delete-btn"
+            title="删除"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      <div className="entry-content">
+        {entry.url && (
+          <div className="entry-field">
+            <span className="field-label">🌐 网址:</span>
+            <a
+              href={entry.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="field-value link"
+            >
+              {entry.url}
+            </a>
+          </div>
+        )}
+
+        <div className="entry-field">
+          <span className="field-label">👤 用户名:</span>
+          <div className="field-value-group">
+            <span className="field-value">{entry.username}</span>
+            <button
+              onClick={() => onCopyToClipboard(entry.username, `user-${entry.id}`)}
+              className="copy-btn"
+              title="复制用户名"
+            >
+              {copiedId === `user-${entry.id}` ? "✓" : "📋"}
+            </button>
+          </div>
+        </div>
+
+        <div className="entry-field">
+          <span className="field-label">🔑 密码:</span>
+          <div className="field-value-group">
+            <span className="field-value password-value">
+              {showPassword === entry.id ? entry.password : "••••••••"}
+            </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onTogglePassword(entry.id);
+              }}
+              className="copy-btn"
+              title="显示/隐藏"
+            >
+              {showPassword === entry.id ? "🙈" : "👁️"}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCopyToClipboard(entry.password, `pass-${entry.id}`);
+              }}
+              className="copy-btn"
+              title="复制密码"
+            >
+              {copiedId === `pass-${entry.id}` ? "✓" : "📋"}
+            </button>
+          </div>
+        </div>
+
+        {entry.notes && (
+          <div className="entry-field">
+            <span className="field-label">📝 备注:</span>
+            <span className="field-value notes">{entry.notes}</span>
+          </div>
+        )}
+
+        {entry.tags && entry.tags.length > 0 && (
+          <div className="entry-field">
+            <span className="field-label">🏷️ 标签:</span>
+            <div className="entry-tags">
+              {entry.tags.map((tag) => (
+                <span key={tag} className="entry-tag">
+                  {tag}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {entry.totp_secret && (
+          <div className="entry-field totp-field">
+            <TotpDisplay secret={entry.totp_secret} password={entry.password} />
+          </div>
+        )}
+      </div>
+
+      <div className="entry-footer">
+        <small>更新于 {new Date(entry.updated_at).toLocaleDateString("zh-CN")}</small>
+      </div>
+    </div>
+  );
+}
+
+function PasswordList({
+  entries,
+  onEdit,
+  onDelete,
+  onAdd,
+  onUpdateOrder,
+  searchTerm,
+  onSearchChange,
+}: PasswordListProps) {
+  const [showPassword, setShowPassword] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<PasswordEntry | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchDeleteConfirm, setBatchDeleteConfirm] = useState<boolean>(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
+
+  // 按排序顺序排序
+  const sortedEntries = [...entries].sort((a, b) => {
+    if (a.sort_order !== undefined && b.sort_order !== undefined) {
+      return a.sort_order - b.sort_order;
+    }
+    if (a.sort_order !== undefined) return -1;
+    if (b.sort_order !== undefined) return 1;
+    return a.created_at - b.created_at;
+  });
+
+  // 获取所有唯一标签
+  const allTags = Array.from(
+    new Set(
+      sortedEntries
+        .flatMap((entry) => entry.tags || [])
+        .filter((tag) => tag)
+    )
+  ).sort();
+
+  const filteredEntries = sortedEntries.filter((entry) => {
+    // 搜索过滤（包含标题、用户名、网址、备注）
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch =
+      !searchTerm ||
+      entry.title.toLowerCase().includes(searchLower) ||
+      entry.username.toLowerCase().includes(searchLower) ||
+      entry.url.toLowerCase().includes(searchLower) ||
+      entry.notes.toLowerCase().includes(searchLower);
+
+    // 标签过滤
+    const matchesTag =
+      !selectedTag || (entry.tags && entry.tags.includes(selectedTag));
+
+    return matchesSearch && matchesTag;
+  });
+
+  const copyToClipboard = async (text: string, id: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const togglePasswordVisibility = (id: string) => {
+    setShowPassword(showPassword === id ? null : id);
+  };
+
+  const confirmDelete = (entry: PasswordEntry) => {
+    setDeleteConfirm(entry);
+  };
+
+  const toggleMultiSelect = () => {
+    setIsMultiSelectMode(!isMultiSelectMode);
+    setSelectedIds(new Set());
+  };
+
+  const handleLongPress = (id: string) => {
+    // 进入多选模式
+    setIsMultiSelectMode(true);
+    // 选中长按的条目
+    setSelectedIds(new Set([id]));
+  };
+
+  const toggleSelectEntry = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const selectAll = () => {
+    const allIds = new Set(filteredEntries.map((e) => e.id));
+    setSelectedIds(allIds);
+  };
+
+  const deselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const batchDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBatchDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteConfirm) {
+      onDelete(deleteConfirm.id);
+      setDeleteConfirm(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirm(null);
+  };
+
+  const handleConfirmBatchDelete = async () => {
+    try {
+      for (const id of selectedIds) {
+        await onDelete(id);
+      }
+      setSelectedIds(new Set());
+      setIsMultiSelectMode(false);
+    } catch (error) {
+      console.error("批量删除失败:", error);
+    } finally {
+      setBatchDeleteConfirm(false);
+    }
+  };
+
+  const handleCancelBatchDelete = () => {
+    setBatchDeleteConfirm(false);
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+    const oldIndex = sortedEntries.findIndex((e) => e.id === active.id);
+    const newIndex = sortedEntries.findIndex((e) => e.id === over.id);
+
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reordered = arrayMove(sortedEntries, oldIndex, newIndex);
+      const updatedEntries = reordered.map((entry, index) => ({
+        ...entry,
+        sort_order: index,
+        updated_at: Date.now(),
+      }));
+
+      setIsSavingOrder(true);
+      try {
+        await onUpdateOrder(updatedEntries);
+      } catch (error) {
+        console.error("❌ 保存失败:", error);
+      } finally {
+        setIsSavingOrder(false);
+      }
+    }
+  };
+
+  return (
+    <div className="password-list-container">
+      <div className="list-header">
+        <div className="header-top">
+          <h1>🔐 2Pass 密码管理器</h1>
+          <div className="header-actions">
+            {isMultiSelectMode ? (
+              <>
+                <button onClick={selectAll} className="batch-btn select-btn">
+                  全选
+                </button>
+                <button onClick={deselectAll} className="batch-btn deselect-btn">
+                  取消全选
+                </button>
+                <button
+                  onClick={batchDelete}
+                  className="batch-btn delete-btn"
+                  disabled={selectedIds.size === 0}
+                >
+                  🗑️ 删除选中 ({selectedIds.size})
+                </button>
+                <button onClick={toggleMultiSelect} className="batch-btn cancel-btn">
+                  退出批量
+                </button>
+              </>
+            ) : (
+              <>
+                <button onClick={toggleMultiSelect} className="batch-mode-btn">
+                  ☑️ 批量管理
+                </button>
+                <button onClick={onAdd} className="add-button">
+                  ➕ 添加密码
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder="🔍 搜索标题、用户名、网址或备注..."
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+        </div>
+        {allTags.length > 0 && (
+          <div className="tag-filter">
+            <button
+              className={`filter-tag ${!selectedTag ? "active" : ""}`}
+              onClick={() => setSelectedTag(null)}
+            >
+              全部
+            </button>
+            {allTags.map((tag) => (
+              <button
+                key={tag}
+                className={`filter-tag ${selectedTag === tag ? "active" : ""}`}
+                onClick={() => setSelectedTag(tag)}
+              >
+                🏷️ {tag}
+              </button>
+            ))}
+          </div>
+        )}
+        {!searchTerm && entries.length > 1 && (
+          <div className="drag-hint">
+            💡 提示：按住卡片左上角的 ⋮⋮ 图标拖动调整顺序，或长按卡片进入批量选择模式
+          </div>
+        )}
+        {isSavingOrder && (
+          <div className="saving-indicator">⏳ 正在保存排序...</div>
+        )}
+      </div>
+
+      <div className="entries-container">
+        {filteredEntries.length === 0 ? (
+          <div className="empty-state">
+            <p>
+              {searchTerm
+                ? "😕 没有找到匹配的密码"
+                : "📝 还没有保存任何密码，点击上方按钮添加"}
+            </p>
+          </div>
+        ) : searchTerm ? (
+          <div className="entries-grid">
+            {filteredEntries.map((entry) => (
+              <SortablePasswordCard
+                key={entry.id}
+                entry={entry}
+                showPassword={showPassword}
+                copiedId={copiedId}
+                isMultiSelectMode={isMultiSelectMode}
+                isSelected={selectedIds.has(entry.id)}
+                onToggleSelect={toggleSelectEntry}
+                onEdit={onEdit}
+                onConfirmDelete={confirmDelete}
+                onTogglePassword={togglePasswordVisibility}
+                onCopyToClipboard={copyToClipboard}
+                onLongPress={handleLongPress}
+              />
+            ))}
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={filteredEntries.map((e) => e.id)} strategy={rectSortingStrategy}>
+              <div className="entries-grid">
+                {filteredEntries.map((entry) => (
+                  <SortablePasswordCard
+                    key={entry.id}
+                    entry={entry}
+                    showPassword={showPassword}
+                    copiedId={copiedId}
+                    isMultiSelectMode={isMultiSelectMode}
+                    isSelected={selectedIds.has(entry.id)}
+                    onToggleSelect={toggleSelectEntry}
+                    onEdit={onEdit}
+                    onConfirmDelete={confirmDelete}
+                    onTogglePassword={togglePasswordVisibility}
+                    onCopyToClipboard={copyToClipboard}
+                    onLongPress={handleLongPress}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+
+      {deleteConfirm && (
+        <ConfirmDialog
+          title="确认删除"
+          message={`确定要删除 "${deleteConfirm.title}" 吗？此操作无法撤销。`}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
+        />
+      )}
+
+      {batchDeleteConfirm && (
+        <ConfirmDialog
+          title="确认批量删除"
+          message={`确定要删除选中的 ${selectedIds.size} 个密码吗？此操作无法撤销。`}
+          onConfirm={handleConfirmBatchDelete}
+          onCancel={handleCancelBatchDelete}
+        />
+      )}
+    </div>
+  );
+}
+
+export default PasswordList;

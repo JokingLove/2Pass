@@ -1,0 +1,81 @@
+/* 主题系统 - CSS 变量 */
+
+/* 默认主题（紫色渐变） */
+:root,
+:root[data-theme="default"] {
+  --primary-start: #667eea;
+  --primary-end: #764ba2;
+  --bg-color: #f6f6f6;
+  --card-bg: #ffffff;
+  --text-primary: #333333;
+  --text-secondary: #666666;
+  --border-color: #e0e0e0;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --shadow-hover: rgba(0, 0, 0, 0.15);
+}
+
+/* 蓝绿渐变主题 */
+:root[data-theme="cyan"] {
+  --primary-start: #07aeea;
+  --primary-end: #2bf598;
+  --bg-color: #f0f9ff;
+  --card-bg: #ffffff;
+  --text-primary: #1a3a4a;
+  --text-secondary: #4a6a7a;
+  --border-color: #b8e6f0;
+  --shadow: rgba(7, 174, 234, 0.1);
+  --shadow-hover: rgba(7, 174, 234, 0.15);
+}
+
+/* 紫粉渐变主题 */
+:root[data-theme="purple-pink"] {
+  --primary-start: #312c8d;
+  --primary-end: #ffc5ff;
+  --bg-color: #f8f5ff;
+  --card-bg: #ffffff;
+  --text-primary: #2a1a4a;
+  --text-secondary: #5a4a7a;
+  --border-color: #e0d0ff;
+  --shadow: rgba(49, 44, 141, 0.1);
+  --shadow-hover: rgba(49, 44, 141, 0.15);
+}
+
+/* 青色渐变主题 */
+:root[data-theme="turquoise"] {
+  --primary-start: #00ffc4;
+  --primary-end: #00c08f;
+  --bg-color: #f0fff9;
+  --card-bg: #ffffff;
+  --text-primary: #1a4a3a;
+  --text-secondary: #4a7a6a;
+  --border-color: #b8f0e0;
+  --shadow: rgba(0, 255, 196, 0.1);
+  --shadow-hover: rgba(0, 255, 196, 0.15);
+}
+
+/* 天蓝色主题 */
+:root[data-theme="sky-blue"] {
+  --primary-start: #56ccf2;
+  --primary-end: #2f80ed;
+  --bg-color: #f0f8ff;
+  --card-bg: #ffffff;
+  --text-primary: #1a365d;
+  --text-secondary: #4a5f7f;
+  --border-color: #bee3f8;
+  --shadow: rgba(47, 128, 237, 0.1);
+  --shadow-hover: rgba(47, 128, 237, 0.15);
+}
+
+/* Bulma 风格主题 */
+:root[data-theme="bulma"] {
+  --primary-start: #00d1b2;
+  --primary-end: #00a896;
+  --bg-color: #f5f5f5;
+  --card-bg: #ffffff;
+  --text-primary: #363636;
+  --text-secondary: #7a7a7a;
+  --border-color: #dbdbdb;
+  --shadow: rgba(0, 0, 0, 0.1);
+  --shadow-hover: rgba(0, 0, 0, 0.15);
+}
+
