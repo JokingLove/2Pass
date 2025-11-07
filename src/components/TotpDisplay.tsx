@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { copyToClipboardWithTimeout } from "../utils/clipboard";
 import "../styles/TotpDisplay.css";
 
 interface TotpDisplayProps {
@@ -55,17 +56,25 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
   }, [secret]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(code);
-    setCopied(true);
-    onCopy?.(code);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await copyToClipboardWithTimeout(code, 30000);
+      setCopied(true);
+      onCopy?.(code);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (error) {
+      console.error('复制 TOTP 失败:', error);
+    }
   };
 
   const handleCopyCombined = async () => {
-    const combinedPassword = password + code;
-    await navigator.clipboard.writeText(combinedPassword);
-    setCopiedCombined(true);
-    setTimeout(() => setCopiedCombined(false), 2000);
+    try {
+      const combinedPassword = password + code;
+      await copyToClipboardWithTimeout(combinedPassword, 30000);
+      setCopiedCombined(true);
+      setTimeout(() => setCopiedCombined(false), 2000);
+    } catch (error) {
+      console.error('复制组合密码失败:', error);
+    }
   };
 
   const getProgressColor = () => {

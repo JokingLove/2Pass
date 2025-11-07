@@ -1,3 +1,4 @@
+// import Changelog from "./Changelog";
 import "../styles/About.css";
 
 function About() {
@@ -6,10 +7,13 @@ function About() {
       <div className="about-header">
         <div className="about-logo">🔐</div>
         <h1>2Pass 密码管理器</h1>
-        <p className="version">版本 1.1.0</p>
+        <p className="version">版本 1.3.0</p>
       </div>
 
       <div className="about-content">
+        {/* <Changelog /> */}
+        
+        
         <div className="feature-grid">
           <div className="feature-card">
             <div className="feature-icon">🔒</div>

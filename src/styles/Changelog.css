@@ -1,0 +1,179 @@
+.changelog-container {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.changelog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.changelog-header:hover {
+  background: #fafafa;
+}
+
+.changelog-latest {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.changelog-version {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.changelog-date {
+  font-size: 0.75rem;
+  color: #b0b0b0;
+}
+
+.changelog-toggle {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #8c8c8c;
+  cursor: pointer;
+  font-size: 0.7rem;
+  transition: all 0.15s ease;
+}
+
+.changelog-toggle:hover {
+  color: #2c2c2c;
+}
+
+.changelog-timeline {
+  padding: 16px 16px 12px 16px;
+  border-top: 1px solid #f0f0f0;
+  animation: expandTimeline 0.2s ease-out;
+}
+
+@keyframes expandTimeline {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+.changelog-entry {
+  position: relative;
+  padding-left: 24px;
+  padding-bottom: 20px;
+}
+
+.changelog-entry:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  background: #d0d0d0;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px #e8e8e8;
+}
+
+.changelog-entry:first-child .timeline-dot {
+  background: #0066ff;
+  box-shadow: 0 0 0 1px #0066ff;
+}
+
+.timeline-line {
+  position: absolute;
+  left: 4px;
+  top: 16px;
+  bottom: -4px;
+  width: 2px;
+  background: #f0f0f0;
+}
+
+.entry-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.entry-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.entry-version {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2c2c2c;
+}
+
+.entry-date {
+  font-size: 0.7rem;
+  color: #b0b0b0;
+}
+
+.entry-changes {
+  margin: 0;
+  padding-left: 18px;
+  list-style: none;
+}
+
+.entry-changes li {
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.6;
+  padding-left: 12px;
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.entry-changes li:before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #d0d0d0;
+}
+
+.entry-changes li:last-child {
+  margin-bottom: 0;
+}
+
+@media (max-width: 768px) {
+  .changelog-header {
+    padding: 10px 14px;
+  }
+
+  .changelog-timeline {
+    padding: 14px 14px 10px 14px;
+  }
+
+  .changelog-version {
+    font-size: 0.85rem;
+  }
+
+  .changelog-date {
+    font-size: 0.7rem;
+  }
+
+  .entry-changes li {
+    font-size: 0.75rem;
+  }
+}

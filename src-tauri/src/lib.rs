@@ -14,18 +14,27 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PasswordHistory {
+    pub timestamp: i64,
+    pub password: Option<String>,
+    pub username: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PasswordEntry {
     pub id: String,
     pub title: String,
     pub username: String,
     pub password: String,
-    pub url: String,
+    pub url: Option<Vec<String>>,
     pub notes: String,
     pub totp_secret: Option<String>, // TOTP secret in base32 format
     pub tags: Option<Vec<String>>, // 标签列表
     pub sort_order: Option<i64>, // 排序顺序
     pub created_at: i64,
     pub updated_at: i64,
+    pub history: Option<Vec<PasswordHistory>>, // 修改历史
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -332,18 +341,11 @@ fn save_entries(app_state: &mut AppState) -> Result<(), String> {
 
 #[tauri::command]
 fn generate_totp(secret: String) -> Result<String, String> {
-    // Log the input for debugging
-    println!("TOTP input secret: {:?}", secret);
-    println!("Secret length: {}", secret.len());
-    
     // Remove any whitespace and padding characters, convert to uppercase
     let clean_secret = secret
         .replace(" ", "")
         .replace("=", "")
         .to_uppercase();
-    
-    println!("Cleaned secret: {:?}", clean_secret);
-    println!("Cleaned length: {}", clean_secret.len());
     
     // Validate Base32 characters
     for (i, c) in clean_secret.chars().enumerate() {
@@ -473,13 +475,14 @@ fn import_chrome_csv(csv_content: String, state: tauri::State<Mutex<AppState>>) 
             title: chrome_entry.name,
             username: chrome_entry.username,
             password: chrome_entry.password,
-            url: chrome_entry.url,
+            url: Some(vec![chrome_entry.url]),
             notes: String::from("从 Chrome 导入"),
             totp_secret: None,
             tags: Some(vec![String::from("Chrome")]),
             sort_order: Some((app_state.entries.len() + imported_count) as i64),
             created_at: now,
             updated_at: now,
+            history: None,
         };
 
         app_state.entries.push(entry);
@@ -544,6 +547,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(Mutex::new(AppState::new()))
         .invoke_handler(tauri::generate_handler![
             check_master_password_exists,

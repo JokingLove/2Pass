@@ -9,9 +9,10 @@ interface SettingsProps {
   onLock: () => void;
   theme: string;
   onThemeChange: (theme: string) => void;
+  onRefresh: () => void;
 }
 
-function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeChange }: SettingsProps) {
+function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeChange, onRefresh }: SettingsProps) {
   const [showChangeMasterPassword, setShowChangeMasterPassword] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -41,26 +42,44 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
 
   const handleExportData = async () => {
     try {
+      // 导入 Tauri 的文件对话框和文件系统 API
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+      
+      // 获取导出数据
       const data = await invoke<string>("export_data");
       
-      // 创建下载链接
-      const blob = new Blob([data], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `2pass-backup-${new Date().toISOString().split("T")[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-
-      alert("✓ 导出成功！备份文件已下载");
+      // 生成默认文件名
+      const defaultFileName = `2pass-backup-${new Date().toISOString().split("T")[0]}.json`;
+      
+      // 打开保存对话框
+      const filePath = await save({
+        defaultPath: defaultFileName,
+        filters: [{
+          name: "JSON",
+          extensions: ["json"]
+        }]
+      });
+      
+      // 如果用户取消了，filePath 为 null
+      if (!filePath) {
+        return;
+      }
+      
+      // 写入文件
+      await writeTextFile(filePath, data);
+      
+      alert("✓ 导出成功！备份文件已保存到：\n" + filePath);
     } catch (err) {
+      console.error("导出失败:", err);
       alert("导出失败：" + err);
     }
   };
 
   const handleImportSuccess = () => {
     // 导入成功后的回调，可以刷新数据
-    alert("✓ 导入成功！请刷新页面查看导入的密码");
+    onRefresh();
+    // alert("✓ 导入成功！请刷新页面查看导入的密码");
   };
 
   const handleChangeMasterPassword = async () => {

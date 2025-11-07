@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   DndContext,
   closestCenter,
@@ -17,6 +17,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { PasswordListProps, PasswordEntry } from "../types";
 import TotpDisplay from "./TotpDisplay";
 import ConfirmDialog from "./ConfirmDialog";
+import { copyToClipboardWithTimeout, highlightText } from "../utils/clipboard";
+import { useKeyboard } from "../hooks/useKeyboard";
 import "../styles/PasswordList.css";
 
 interface SortableCardProps {
@@ -25,12 +27,17 @@ interface SortableCardProps {
   copiedId: string | null;
   isMultiSelectMode: boolean;
   isSelected: boolean;
+  isExpanded: boolean;
+  isHistoryExpanded: boolean;
+  searchTerm: string;
   onToggleSelect: (id: string) => void;
   onEdit: (entry: PasswordEntry) => void;
   onConfirmDelete: (entry: PasswordEntry) => void;
   onTogglePassword: (id: string) => void;
   onCopyToClipboard: (text: string, id: string) => void;
   onLongPress?: (id: string) => void;
+  onToggleExpand: (id: string) => void;
+  onToggleHistory: (id: string) => void;
 }
 
 function SortablePasswordCard({
@@ -39,12 +46,17 @@ function SortablePasswordCard({
   copiedId,
   isMultiSelectMode,
   isSelected,
+  isExpanded,
+  isHistoryExpanded,
+  searchTerm,
   onToggleSelect,
   onEdit,
   onConfirmDelete,
   onTogglePassword,
   onCopyToClipboard,
   onLongPress,
+  onToggleExpand,
+  onToggleHistory,
 }: SortableCardProps) {
   const {
     attributes,
@@ -120,7 +132,7 @@ function SortablePasswordCard({
     <div
       ref={setNodeRef}
       style={style}
-      className={`entry-card ${isDragging ? "dragging" : ""} ${isSelected ? "selected" : ""}`}
+      className={`entry-card ${isDragging ? "dragging" : ""} ${isSelected ? "selected" : ""} ${isExpanded ? "expanded" : "collapsed"}`}
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
@@ -139,23 +151,81 @@ function SortablePasswordCard({
           />
         </div>
       )}
-      <div className="entry-header">
+      <div 
+        className="entry-header"
+        onClick={(e) => {
+          // 如果点击的不是按钮，则切换展开状态
+          if (!(e.target as HTMLElement).closest('button')) {
+            onToggleExpand(entry.id);
+          }
+        }}
+      >
         {!isMultiSelectMode && (
           <div className="drag-handle" {...attributes} {...listeners} title="按住拖动排序">
             ⋮⋮
           </div>
         )}
-        <h3>{entry.title}</h3>
+        <div className="entry-title-section">
+          <h3>{highlightText(entry.title, searchTerm)}</h3>
+          {!isExpanded && (
+            <span className="entry-username-preview">{entry.username}</span>
+          )}
+        </div>
         <div className="entry-actions">
           <button
-            onClick={() => onEdit(entry)}
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              console.log('🔵 快速复制按钮被点击');
+              console.log('🔵 entry.totp_secret:', entry.totp_secret);
+              
+              // 如果有 TOTP，复制组合密码
+              if (entry.totp_secret) {
+                try {
+                  console.log('🔵 开始生成 TOTP...');
+                  // 立即生成 TOTP 并复制
+                  const { invoke } = await import("@tauri-apps/api/core");
+                  const totpCode = await invoke<string>("generate_totp", { secret: entry.totp_secret });
+                  console.log('🔵 TOTP 生成成功:', totpCode);
+                  const combinedPassword = entry.password + totpCode;
+                  console.log('🔵 组合密码:', combinedPassword);
+                  console.log('🔵 开始复制到剪贴板...');
+                  await onCopyToClipboard(combinedPassword, `quick-${entry.id}`);
+                  console.log('🔵 复制完成');
+                } catch (err) {
+                  console.error("❌ Failed to generate TOTP:", err);
+                  // 如果生成失败，复制普通密码
+                  await onCopyToClipboard(entry.password, `quick-${entry.id}`);
+                }
+              } else {
+                // 没有 TOTP，复制普通密码
+                console.log('🔵 没有 TOTP，复制普通密码');
+                await onCopyToClipboard(entry.password, `quick-${entry.id}`);
+              }
+            }}
+            className={`action-btn quick-copy-btn ${copiedId === `quick-${entry.id}` ? 'copied' : ''}`}
+            title={entry.totp_secret ? "快速复制组合密码" : "快速复制密码"}
+          >
+            {copiedId === `quick-${entry.id}` ? "✓" : "📋"}
+          </button>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEdit(entry);
+            }}
             className="action-btn edit-btn"
             title="编辑"
           >
             ✏️
           </button>
           <button
-            onClick={() => onConfirmDelete(entry)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onConfirmDelete(entry);
+            }}
             className="action-btn delete-btn"
             title="删除"
           >
@@ -164,94 +234,165 @@ function SortablePasswordCard({
         </div>
       </div>
 
-      <div className="entry-content">
-        {entry.url && (
-          <div className="entry-field">
-            <span className="field-label">🌐 网址:</span>
-            <a
-              href={entry.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="field-value link"
-            >
-              {entry.url}
-            </a>
-          </div>
-        )}
-
-        <div className="entry-field">
-          <span className="field-label">👤 用户名:</span>
-          <div className="field-value-group">
-            <span className="field-value">{entry.username}</span>
-            <button
-              onClick={() => onCopyToClipboard(entry.username, `user-${entry.id}`)}
-              className="copy-btn"
-              title="复制用户名"
-            >
-              {copiedId === `user-${entry.id}` ? "✓" : "📋"}
-            </button>
-          </div>
-        </div>
-
-        <div className="entry-field">
-          <span className="field-label">🔑 密码:</span>
-          <div className="field-value-group">
-            <span className="field-value password-value">
-              {showPassword === entry.id ? entry.password : "••••••••"}
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onTogglePassword(entry.id);
-              }}
-              className="copy-btn"
-              title="显示/隐藏"
-            >
-              {showPassword === entry.id ? "🙈" : "👁️"}
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onCopyToClipboard(entry.password, `pass-${entry.id}`);
-              }}
-              className="copy-btn"
-              title="复制密码"
-            >
-              {copiedId === `pass-${entry.id}` ? "✓" : "📋"}
-            </button>
-          </div>
-        </div>
-
-        {entry.notes && (
-          <div className="entry-field">
-            <span className="field-label">📝 备注:</span>
-            <span className="field-value notes">{entry.notes}</span>
-          </div>
-        )}
-
-        {entry.tags && entry.tags.length > 0 && (
-          <div className="entry-field">
-            <span className="field-label">🏷️ 标签:</span>
-            <div className="entry-tags">
-              {entry.tags.map((tag) => (
-                <span key={tag} className="entry-tag">
-                  {tag}
-                </span>
+      {isExpanded && (
+        <div className="entry-content">
+          {/* 网址 */}
+          {entry.url && entry.url.length > 0 && (
+            <div className="entry-section">
+              {entry.url.map((url, index) => (
+                url && (
+                  <a
+                    key={index}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="info-row url-row"
+                    title={url}
+                    // onClick={(e) => e.stopPropagation()}
+                  >
+                    <span className="info-label">🌐 网址</span>
+                    <div className="info-value-group">
+                      <span className="info-value">{highlightText(url, searchTerm)}</span>
+                      <span className="link-arrow">→</span>
+                    </div>
+                  </a>
+                )
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {entry.totp_secret && (
-          <div className="entry-field totp-field">
-            <TotpDisplay secret={entry.totp_secret} password={entry.password} />
+          {/* 用户名 */}
+          <div className="info-row">
+            <span className="info-label">👤 用户名</span>
+            <div className="info-value-group">
+              <span className="info-value">{highlightText(entry.username, searchTerm)}</span>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await onCopyToClipboard(entry.username, `user-${entry.id}`);
+                }}
+                className={`icon-btn ${copiedId === `user-${entry.id}` ? 'copied' : ''}`}
+                title="复制用户名"
+              >
+                {copiedId === `user-${entry.id}` ? "✓" : "📋"}
+              </button>
+            </div>
           </div>
-        )}
-      </div>
 
-      <div className="entry-footer">
-        <small>更新于 {new Date(entry.updated_at).toLocaleDateString("zh-CN")}</small>
-      </div>
+          {/* 密码 */}
+          <div className="info-row">
+            <span className="info-label">🔑 密码</span>
+            <div className="info-value-group">
+              <span className="info-value password-value">
+                {showPassword === entry.id ? entry.password : "••••••••"}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTogglePassword(entry.id);
+                }}
+                className="icon-btn"
+                title="显示/隐藏"
+              >
+                {showPassword === entry.id ? "🙈" : "👁️"}
+              </button>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await onCopyToClipboard(entry.password, `pass-${entry.id}`);
+                }}
+                className={`icon-btn ${copiedId === `pass-${entry.id}` ? 'copied' : ''}`}
+                title="复制密码"
+              >
+                {copiedId === `pass-${entry.id}` ? "✓" : "📋"}
+              </button>
+            </div>
+          </div>
+
+          {/* 备注 */}
+          {entry.notes && (
+            <div className="info-row notes-row">
+              <span className="info-label">📝 备注</span>
+              <div className="info-value notes-content">
+                {highlightText(entry.notes, searchTerm)}
+              </div>
+            </div>
+          )}
+
+          {/* 标签 */}
+          {entry.tags && entry.tags.length > 0 && (
+            <div className="info-row tags-row">
+              <span className="info-label">🏷️ 标签</span>
+              <div className="entry-tags">
+                {entry.tags.map((tag, index) => (
+                  <span key={tag} className={`entry-tag tag-color-${index % 6}`}>
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TOTP */}
+          {entry.totp_secret && (
+            <div className="entry-section totp-section">
+              <TotpDisplay secret={entry.totp_secret} password={entry.password} />
+            </div>
+          )}
+
+          {/* 更新历史 */}
+          <div className="entry-history">
+            <button 
+              className="history-header"
+              onClick={(e) => {
+                e.stopPropagation();
+                console.log('点击了更新于按钮, entry.id:', entry.id);
+                console.log('历史记录:', entry.history);
+                console.log('历史记录数量:', entry.history?.length || 0);
+                if (entry.history && entry.history.length > 0) {
+                  onToggleHistory(entry.id);
+                }
+              }}
+              disabled={!entry.history || entry.history.length === 0}
+              title={entry.history && entry.history.length > 0 ? "查看修改历史" : "暂无修改历史"}
+            >
+              <span className="history-date">
+                更新于 {new Date(entry.updated_at).toLocaleDateString("zh-CN")}
+              </span>
+              {entry.history && entry.history.length > 0 && (
+                <span className="history-toggle">
+                  {isHistoryExpanded ? "▼" : "▶"}
+                </span>
+              )}
+            </button>
+
+            {isHistoryExpanded && entry.history && entry.history.length > 0 && (
+              <div className="history-timeline">
+                {entry.history.map((record, index) => (
+                  <div key={index} className="history-entry">
+                    <div className="history-dot" />
+                    <div className="history-content">
+                      <span className="history-timestamp">
+                        {new Date(record.timestamp).toLocaleString("zh-CN")}
+                      </span>
+                      {record.password && (
+                        <div className="history-change">密码已更新</div>
+                      )}
+                      {record.username && (
+                        <div className="history-change">用户名: {record.username}</div>
+                      )}
+                      {record.notes && (
+                        <div className="history-change">备注: {record.notes}</div>
+                      )}
+                    </div>
+                    {entry.history && index < entry.history.length - 1 && <div className="history-line" />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -273,6 +414,9 @@ function PasswordList({
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchDeleteConfirm, setBatchDeleteConfirm] = useState<boolean>(false);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [historyExpandedIds, setHistoryExpandedIds] = useState<Set<string>>(new Set());
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -308,7 +452,7 @@ function PasswordList({
       !searchTerm ||
       entry.title.toLowerCase().includes(searchLower) ||
       entry.username.toLowerCase().includes(searchLower) ||
-      entry.url.toLowerCase().includes(searchLower) ||
+      (entry.url && entry.url.some((url) => url.toLowerCase().includes(searchLower))) ||
       entry.notes.toLowerCase().includes(searchLower);
 
     // 标签过滤
@@ -319,10 +463,40 @@ function PasswordList({
   });
 
   const copyToClipboard = async (text: string, id: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    try {
+      await copyToClipboardWithTimeout(text, 30000); // 30秒后自动清空
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('复制失败:', error);
+    }
   };
+
+  const toggleExpand = (id: string) => {
+    const newExpanded = new Set(expandedIds);
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id);
+    } else {
+      newExpanded.add(id);
+    }
+    setExpandedIds(newExpanded);
+  };
+
+  const toggleHistory = (id: string) => {
+    const newHistoryExpanded = new Set(historyExpandedIds);
+    if (newHistoryExpanded.has(id)) {
+      newHistoryExpanded.delete(id);
+    } else {
+      newHistoryExpanded.add(id);
+    }
+    setHistoryExpandedIds(newHistoryExpanded);
+  };
+
+  // 快捷键支持
+  useKeyboard({
+    onNew: onAdd,
+    onSearch: () => searchInputRef.current?.focus(),
+  });
 
   const togglePasswordVisibility = (id: string) => {
     setShowPassword(showPassword === id ? null : id);
@@ -465,8 +639,9 @@ function PasswordList({
         </div>
         <div className="search-bar">
           <input
+            ref={searchInputRef}
             type="text"
-            placeholder="🔍 搜索标题、用户名、网址或备注..."
+            placeholder="🔍 搜索标题、用户名、网址或备注... (Cmd/Ctrl+F)"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
@@ -519,12 +694,17 @@ function PasswordList({
                 copiedId={copiedId}
                 isMultiSelectMode={isMultiSelectMode}
                 isSelected={selectedIds.has(entry.id)}
+                isExpanded={expandedIds.has(entry.id)}
+                isHistoryExpanded={historyExpandedIds.has(entry.id)}
+                searchTerm={searchTerm}
                 onToggleSelect={toggleSelectEntry}
                 onEdit={onEdit}
                 onConfirmDelete={confirmDelete}
                 onTogglePassword={togglePasswordVisibility}
                 onCopyToClipboard={copyToClipboard}
                 onLongPress={handleLongPress}
+                onToggleExpand={toggleExpand}
+                onToggleHistory={toggleHistory}
               />
             ))}
           </div>
@@ -544,12 +724,17 @@ function PasswordList({
                     copiedId={copiedId}
                     isMultiSelectMode={isMultiSelectMode}
                     isSelected={selectedIds.has(entry.id)}
+                    isExpanded={expandedIds.has(entry.id)}
+                    isHistoryExpanded={historyExpandedIds.has(entry.id)}
+                    searchTerm={searchTerm}
                     onToggleSelect={toggleSelectEntry}
                     onEdit={onEdit}
                     onConfirmDelete={confirmDelete}
                     onTogglePassword={togglePasswordVisibility}
                     onCopyToClipboard={copyToClipboard}
                     onLongPress={handleLongPress}
+                    onToggleExpand={toggleExpand}
+                    onToggleHistory={toggleHistory}
                   />
                 ))}
               </div>

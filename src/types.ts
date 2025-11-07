@@ -1,15 +1,23 @@
+export interface PasswordHistory {
+  timestamp: number;
+  password?: string;
+  username?: string;
+  notes?: string;
+}
+
 export interface PasswordEntry {
   id: string;
   title: string;
   username: string;
   password: string;
-  url: string;
+  url?: string[];
   notes: string;
   totp_secret?: string; // TOTP secret in base32 format
   tags?: string[]; // 标签列表
   sort_order?: number; // 排序顺序
   created_at: number;
   updated_at: number;
+  history?: PasswordHistory[] | undefined; // 修改历史
 }
 
 export interface LoginProps {

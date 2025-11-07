@@ -14,6 +14,7 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -42,8 +43,17 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
     }
 
     setIsImporting(true);
+    setImportProgress(0);
 
     try {
+      // 模拟进度更新
+      const progressInterval = setInterval(() => {
+        setImportProgress((prev) => {
+          if (prev >= 90) return prev;
+          return prev + 10;
+        });
+      }, 100);
+
       let count: number;
       
       if (importType === "encrypted") {
@@ -57,6 +67,9 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
         });
       }
 
+      clearInterval(progressInterval);
+      setImportProgress(100);
+
       setSuccess(`成功导入 ${count} 条密码！`);
       setTimeout(() => {
         onSuccess();
@@ -64,17 +77,18 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
       }, 2000);
     } catch (err) {
       setError(String(err));
+      setImportProgress(0);
     } finally {
       setIsImporting(false);
     }
   };
 
   return (
-    <div className="import-overlay">
-      <div className="import-dialog">
+    <div className="import-overlay" style={{ pointerEvents: isImporting ? 'none' : 'auto' }}>
+      <div className="import-dialog" style={{ pointerEvents: 'auto' }}>
         <div className="import-header">
           <h2>📥 导入数据</h2>
-          <button onClick={onClose} className="close-btn">✕</button>
+          <button onClick={onClose} className="close-btn" disabled={isImporting}>✕</button>
         </div>
 
         <div className="import-content">
@@ -82,12 +96,14 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
             <button
               className={`type-btn ${importType === "encrypted" ? "active" : ""}`}
               onClick={() => setImportType("encrypted")}
+              disabled={isImporting}
             >
               🔒 导入加密备份
             </button>
             <button
               className={`type-btn ${importType === "chrome" ? "active" : ""}`}
               onClick={() => setImportType("chrome")}
+              disabled={isImporting}
             >
               🌐 导入 Chrome 密码
             </button>
@@ -106,8 +122,9 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
                   accept=".json"
                   onChange={handleFileSelect}
                   id="encrypted-file"
+                  disabled={isImporting}
                 />
-                <label htmlFor="encrypted-file" className="file-label">
+                <label htmlFor="encrypted-file" className="file-label" style={{ opacity: isImporting ? 0.5 : 1, cursor: isImporting ? 'not-allowed' : 'pointer' }}>
                   📁 选择备份文件
                 </label>
               </div>
@@ -125,6 +142,7 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="输入创建备份时的主密码"
+                  disabled={isImporting}
                 />
               </div>
             </div>
@@ -151,8 +169,9 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
                   accept=".csv"
                   onChange={handleFileSelect}
                   id="chrome-file"
+                  disabled={isImporting}
                 />
-                <label htmlFor="chrome-file" className="file-label">
+                <label htmlFor="chrome-file" className="file-label" style={{ opacity: isImporting ? 0.5 : 1, cursor: isImporting ? 'not-allowed' : 'pointer' }}>
                   📁 选择 CSV 文件
                 </label>
               </div>
@@ -165,12 +184,24 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
             </div>
           )}
 
+          {isImporting && (
+            <div className="progress-container">
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${importProgress}%` }}
+                />
+              </div>
+              <div className="progress-text">导入中... {importProgress}%</div>
+            </div>
+          )}
+
           {error && <div className="error-box">{error}</div>}
           {success && <div className="success-box">{success}</div>}
         </div>
 
         <div className="import-actions">
-          <button onClick={onClose} className="cancel-btn">
+          <button onClick={onClose} className="cancel-btn" disabled={isImporting}>
             取消
           </button>
           <button

@@ -8,6 +8,10 @@
     "opener:default",
     "dialog:allow-ask",
     "dialog:allow-message",
-    "dialog:allow-confirm"
+    "dialog:allow-confirm",
+    "dialog:allow-save",
+    "fs:allow-write-text-file",
+    "clipboard-manager:allow-write-text",
+    "clipboard-manager:allow-read-text"
   ]
 }

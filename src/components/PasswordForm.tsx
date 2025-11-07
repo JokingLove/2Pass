@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { PasswordFormProps } from "../types";
 import PasswordGenerator from "./PasswordGenerator";
 import TotpConfig from "./TotpConfig";
+import { calculateStrength, getStrengthColor, getStrengthLabel } from "../utils/passwordStrength";
 import "../styles/PasswordForm.css";
 
 function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
   const [title, setTitle] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
   const [totpSecret, setTotpSecret] = useState<string | undefined>();
   const [tags, setTags] = useState<string[]>([]);
@@ -25,7 +26,7 @@ function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
       setTitle(entry.title);
       setUsername(entry.username);
       setPassword(entry.password);
-      setUrl(entry.url);
+      setUrl(entry.url || []);
       setNotes(entry.notes);
       setTotpSecret(entry.totp_secret);
       setTags(entry.tags || []);
@@ -87,6 +88,9 @@ function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
     setShowGenerator(false);
   };
 
+  // 计算密码强度
+  const passwordStrength = password ? calculateStrength(password) : null;
+
   return (
     <div className="form-overlay">
       <div className="form-container">
@@ -113,14 +117,50 @@ function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="url">网址</label>
-            <input
-              id="url"
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com"
-            />
+            <label htmlFor="url">🌐 网址</label>
+            <div className="url-list">
+              {url.length === 0 ? (
+                <div className="url-empty-state">
+                  <span className="empty-icon">🔗</span>
+                  <span className="empty-text">暂无网址</span>
+                </div>
+              ) : (
+                url.map((singleUrl, index) => (
+                  <div key={index} className="url-item">
+                    <span className="url-index">{index + 1}</span>
+                    <input
+                      type="url"
+                      value={singleUrl}
+                      onChange={(e) => {
+                        const updatedUrls = [...url];
+                        updatedUrls[index] = e.target.value;
+                        setUrl(updatedUrls);
+                      }}
+                      placeholder="https://example.com"
+                      className="url-input"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUrl(url.filter((_, i) => i !== index));
+                      }}
+                      className="url-remove-btn"
+                      title="删除"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))
+              )}
+              <button
+                type="button"
+                onClick={() => setUrl([...url, ""])}
+                className="url-add-btn"
+              >
+                <span className="btn-icon">➕</span>
+                <span className="btn-text">添加网址</span>
+              </button>
+            </div>
           </div>
 
           <div className="form-group">
@@ -164,6 +204,29 @@ function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
                 🎲
               </button>
             </div>
+            {passwordStrength && (
+              <div className="password-strength">
+                <div className="strength-bar-container">
+                  <div
+                    className={`strength-bar ${passwordStrength.level}`}
+                    style={{
+                      width: `${passwordStrength.percentage}%`,
+                      backgroundColor: getStrengthColor(passwordStrength.level),
+                    }}
+                  />
+                </div>
+                <div className="strength-info">
+                  <span className={`strength-label ${passwordStrength.level}`}>
+                    强度: {getStrengthLabel(passwordStrength.level)}
+                  </span>
+                  {passwordStrength.suggestions.length > 0 && (
+                    <span className="strength-suggestions">
+                      💡 {passwordStrength.suggestions.join('，')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {showGenerator && (

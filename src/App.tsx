@@ -8,6 +8,7 @@ import GeneratorView from "./components/GeneratorView";
 import Settings from "./components/Settings";
 import About from "./components/About";
 import { PasswordEntry } from "./types";
+import { useKeyboard } from "./hooks/useKeyboard";
 import "./App.css";
 
 function App() {
@@ -98,8 +99,48 @@ function App() {
   const handleSaveEntry = async (entry: PasswordEntry) => {
     try {
       if (editingEntry) {
+        // 如果是编辑，记录历史
+        const history = editingEntry.history || [];
+        
+        // 检查是否有实质性修改
+        const passwordChanged = editingEntry.password !== entry.password;
+        const usernameChanged = editingEntry.username !== entry.username;
+        const notesChanged = editingEntry.notes !== entry.notes;
+        const hasChanges = passwordChanged || usernameChanged || notesChanged;
+        
+        if (hasChanges) {
+          // 创建历史记录对象，只记录发生变化的字段的旧值
+          const historyRecord: {
+            timestamp: number;
+            password?: string;
+            username?: string;
+            notes?: string;
+          } = {
+            timestamp: editingEntry.updated_at,
+          };
+          
+          if (passwordChanged) {
+            historyRecord.password = editingEntry.password;
+          }
+          if (usernameChanged) {
+            historyRecord.username = editingEntry.username;
+          }
+          if (notesChanged) {
+            historyRecord.notes = editingEntry.notes;
+          }
+          
+          // 添加历史记录（最多保留10条）
+          const newHistory = [historyRecord, ...history].slice(0, 10);
+          entry.history = newHistory;
+        } else {
+          // 没有变化，保留原有历史
+          entry.history = history;
+        }
+        
         await invoke("update_entry", { entry });
       } else {
+        // 新建条目，初始化空历史
+        entry.history = [];
         await invoke("add_entry", { entry });
       }
       await loadEntries();
@@ -162,11 +203,25 @@ function App() {
     localStorage.setItem("autoLockTimeout", minutes.toString());
   };
 
+  const handleRefresh = async () => {
+    await loadEntries();
+  }
+
   const handleThemeChange = (newTheme: string) => {
     setTheme(newTheme);
     localStorage.setItem("theme", newTheme);
     document.documentElement.setAttribute("data-theme", newTheme);
   };
+
+  // 全局快捷键
+  useKeyboard({
+    onLock: handleLock,
+    onEscape: () => {
+      if (showForm) {
+        handleCancelForm();
+      }
+    },
+  });
 
   const renderView = () => {
     switch (currentView) {
@@ -192,6 +247,7 @@ function App() {
             onLock={handleLock}
             theme={theme}
             onThemeChange={handleThemeChange}
+            onRefresh={handleRefresh}
           />
         );
       case "about":
