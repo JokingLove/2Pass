@@ -16,6 +16,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { PasswordListProps, PasswordEntry } from "../types";
 import TotpDisplay from "./TotpDisplay";
+import PasswordHistory from "./PasswordHistory";
 import ConfirmDialog from "./ConfirmDialog";
 import { copyToClipboardWithTimeout, highlightText } from "../utils/clipboard";
 import { useKeyboard } from "../hooks/useKeyboard";
@@ -82,6 +83,12 @@ function SortablePasswordCard({
   // 长按事件处理
   const handleMouseDown = (e: React.MouseEvent | React.TouchEvent) => {
     if (isMultiSelectMode) return;
+
+    // 检查是否点击了按钮或其他交互元素
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('a') || target.closest('input')) {
+      return; // 忽略按钮、链接和输入框的点击
+    }
 
     // 记录初始鼠标位置
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
@@ -341,56 +348,12 @@ function SortablePasswordCard({
           )}
 
           {/* 更新历史 */}
-          <div className="entry-history">
-            <button 
-              className="history-header"
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log('点击了更新于按钮, entry.id:', entry.id);
-                console.log('历史记录:', entry.history);
-                console.log('历史记录数量:', entry.history?.length || 0);
-                if (entry.history && entry.history.length > 0) {
-                  onToggleHistory(entry.id);
-                }
-              }}
-              disabled={!entry.history || entry.history.length === 0}
-              title={entry.history && entry.history.length > 0 ? "查看修改历史" : "暂无修改历史"}
-            >
-              <span className="history-date">
-                更新于 {new Date(entry.updated_at).toLocaleDateString("zh-CN")}
-              </span>
-              {entry.history && entry.history.length > 0 && (
-                <span className="history-toggle">
-                  {isHistoryExpanded ? "▼" : "▶"}
-                </span>
-              )}
-            </button>
-
-            {isHistoryExpanded && entry.history && entry.history.length > 0 && (
-              <div className="history-timeline">
-                {entry.history.map((record, index) => (
-                  <div key={index} className="history-entry">
-                    <div className="history-dot" />
-                    <div className="history-content">
-                      <span className="history-timestamp">
-                        {new Date(record.timestamp).toLocaleString("zh-CN")}
-                      </span>
-                      {record.password && (
-                        <div className="history-change">密码已更新</div>
-                      )}
-                      {record.username && (
-                        <div className="history-change">用户名: {record.username}</div>
-                      )}
-                      {record.notes && (
-                        <div className="history-change">备注: {record.notes}</div>
-                      )}
-                    </div>
-                    {entry.history && index < entry.history.length - 1 && <div className="history-line" />}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <PasswordHistory
+            history={entry.history}
+            updatedAt={entry.updated_at}
+            isExpanded={isHistoryExpanded}
+            onToggle={() => onToggleHistory(entry.id)}
+          />
         </div>
       )}
     </div>
@@ -496,6 +459,13 @@ function PasswordList({
   useKeyboard({
     onNew: onAdd,
     onSearch: () => searchInputRef.current?.focus(),
+    onEscape: () => {
+      // ESC 键退出选择模式
+      if (isMultiSelectMode) {
+        setIsMultiSelectMode(false);
+        setSelectedIds(new Set());
+      }
+    },
   });
 
   const togglePasswordVisibility = (id: string) => {
@@ -665,9 +635,14 @@ function PasswordList({
             ))}
           </div>
         )}
-        {!searchTerm && entries.length > 1 && (
+        {!searchTerm && entries.length > 1 && !isMultiSelectMode && (
           <div className="drag-hint">
             💡 提示：按住卡片左上角的 ⋮⋮ 图标拖动调整顺序，或长按卡片进入批量选择模式
+          </div>
+        )}
+        {isMultiSelectMode && (
+          <div className="drag-hint">
+            💡 提示：按 ESC 键退出批量选择模式
           </div>
         )}
         {isSavingOrder && (

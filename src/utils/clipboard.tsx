@@ -6,21 +6,14 @@ export const copyToClipboardWithTimeout = async (
   text: string,
   timeoutMs: number = 30000
 ): Promise<void> => {
-  console.log('📋 copyToClipboardWithTimeout 被调用');
-  console.log('📋 要复制的文本长度:', text.length);
-  console.log('📋 文本前20字符:', text.substring(0, 20));
   
   try {
     // 使用 Tauri 剪贴板插件
-    console.log('📋 使用 Tauri 剪贴板插件...');
     await writeText(text);
-    console.log('✅ 已成功复制到剪贴板 (Tauri)');
 
     // 验证复制是否成功
     try {
       const clipboardContent = await readText();
-      console.log('📋 验证剪贴板内容长度:', clipboardContent?.length || 0);
-      console.log('📋 内容匹配:', clipboardContent === text);
       if (clipboardContent !== text) {
         console.error('❌ 剪贴板内容不匹配！');
         console.error('期望长度:', text.length);
@@ -37,7 +30,6 @@ export const copyToClipboardWithTimeout = async (
         const currentClipboard = await readText();
         if (currentClipboard === text) {
           await writeText('');
-          console.log('🧹 剪贴板已自动清空');
         }
       } catch (err) {
         console.log('⚠️ 无法清空剪贴板:', err);
