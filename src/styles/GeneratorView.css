@@ -1,6 +1,6 @@
 .generator-view-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
   padding: 20px;
   overflow-y: auto;
 }
@@ -90,7 +90,7 @@
   align-items: center;
   gap: 12px;
   padding: 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
   border-radius: 12px;
   margin-bottom: 16px;
 }
@@ -108,7 +108,7 @@
 .copy-result-btn {
   padding: 12px 24px;
   background: rgba(255, 255, 255, 0.95);
-  color: #667eea;
+  color: var(--primary-start);
   border: none;
   border-radius: 8px;
   font-size: 1rem;

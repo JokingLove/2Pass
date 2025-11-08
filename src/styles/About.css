@@ -1,6 +1,6 @@
 .about-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
   padding: 20px;
   overflow-y: auto;
 }
