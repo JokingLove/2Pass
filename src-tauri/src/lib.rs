@@ -2,8 +2,8 @@ use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Nonce,
 };
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use base64::{engine::general_purpose, Engine as _};
 use data_encoding::{BASE32, BASE32_NOPAD};
 use directories::ProjectDirs;
@@ -30,8 +30,8 @@ pub struct PasswordEntry {
     pub url: Option<Vec<String>>,
     pub notes: String,
     pub totp_secret: Option<String>, // TOTP secret in base32 format
-    pub tags: Option<Vec<String>>, // 标签列表
-    pub sort_order: Option<i64>, // 排序顺序
+    pub tags: Option<Vec<String>>,   // 标签列表
+    pub sort_order: Option<i64>,     // 排序顺序
     pub created_at: i64,
     pub updated_at: i64,
     pub history: Option<Vec<PasswordHistory>>, // 修改历史
@@ -76,11 +76,7 @@ fn derive_key(master_password: &str) -> Vec<u8> {
     let salt = b"2pass_fixed_salt_change_in_prod";
     let mut key = vec![0u8; 32];
     argon2
-        .hash_password_into(
-            master_password.as_bytes(),
-            salt,
-            &mut key,
-        )
+        .hash_password_into(master_password.as_bytes(), salt, &mut key)
         .unwrap();
     key
 }
@@ -106,11 +102,11 @@ fn decrypt_data(encrypted: &str, nonce_str: &str, key: &[u8]) -> Result<String, 
     let nonce_bytes = general_purpose::STANDARD
         .decode(nonce_str)
         .map_err(|e| e.to_string())?;
-    
+
     if nonce_bytes.len() != 12 {
         return Err("Invalid nonce size".to_string());
     }
-    
+
     #[allow(deprecated)]
     let nonce = Nonce::from_slice(&nonce_bytes);
 
@@ -168,7 +164,7 @@ fn verify_master_password(
     state: tauri::State<Mutex<AppState>>,
 ) -> Result<bool, String> {
     let mut app_state = state.lock().unwrap();
-    
+
     let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
     let storage_data: StorageData = serde_json::from_str(&data).map_err(|e| e.to_string())?;
 
@@ -219,10 +215,7 @@ fn add_entry(
 }
 
 #[tauri::command]
-fn update_entry(
-    entry: PasswordEntry,
-    state: tauri::State<Mutex<AppState>>,
-) -> Result<(), String> {
+fn update_entry(entry: PasswordEntry, state: tauri::State<Mutex<AppState>>) -> Result<(), String> {
     let mut app_state = state.lock().unwrap();
     if app_state.encryption_key.is_none() {
         return Err("Not authenticated".to_string());
@@ -266,7 +259,7 @@ fn change_master_password(
     let parsed_hash =
         PasswordHash::new(&storage_data.master_password_hash).map_err(|e| e.to_string())?;
     let argon2 = Argon2::default();
-    
+
     if argon2
         .verify_password(old_password.as_bytes(), &parsed_hash)
         .is_err()
@@ -276,11 +269,7 @@ fn change_master_password(
 
     // 用旧密码解密当前数据
     let old_key = derive_key(&old_password);
-    let decrypted = decrypt_data(
-        &storage_data.encrypted_data,
-        &storage_data.nonce,
-        &old_key,
-    )?;
+    let decrypted = decrypt_data(&storage_data.encrypted_data, &storage_data.nonce, &old_key)?;
     let entries: Vec<PasswordEntry> = serde_json::from_str(&decrypted).unwrap_or_default();
 
     // 生成新密码的哈希
@@ -342,21 +331,18 @@ fn save_entries(app_state: &mut AppState) -> Result<(), String> {
 #[tauri::command]
 fn generate_totp(secret: String) -> Result<String, String> {
     // Remove any whitespace and padding characters, convert to uppercase
-    let clean_secret = secret
-        .replace(" ", "")
-        .replace("=", "")
-        .to_uppercase();
-    
+    let clean_secret = secret.replace(" ", "").replace("=", "").to_uppercase();
+
     // Validate Base32 characters
     for (i, c) in clean_secret.chars().enumerate() {
         if !c.is_ascii_uppercase() && !('2'..='7').contains(&c) {
             return Err(format!(
-                "Invalid character '{}' at position {}. Base32 only allows A-Z and 2-7. Your secret: '{}'", 
+                "Invalid character '{}' at position {}. Base32 only allows A-Z and 2-7. Your secret: '{}'",
                 c, i, clean_secret
             ));
         }
     }
-    
+
     // Try to decode base32 secret
     // First try without padding (most common for TOTP)
     let secret_bytes = BASE32_NOPAD
@@ -366,10 +352,19 @@ fn generate_totp(secret: String) -> Result<String, String> {
             // If that fails, try adding padding
             let padded = add_base32_padding(&clean_secret);
             println!("Trying with padding: {:?}", padded);
-            BASE32.decode(padded.as_bytes())
-                .map_err(|e2| format!("Both decode attempts failed. NOPAD: {:?}, PADDED: {:?}", e1, e2))
+            BASE32.decode(padded.as_bytes()).map_err(|e2| {
+                format!(
+                    "Both decode attempts failed. NOPAD: {:?}, PADDED: {:?}",
+                    e1, e2
+                )
+            })
         })
-        .map_err(|e| format!("Invalid TOTP secret format: {}. Secret must be Base32 encoded (A-Z, 2-7).", e))?;
+        .map_err(|e| {
+            format!(
+                "Invalid TOTP secret format: {}. Secret must be Base32 encoded (A-Z, 2-7).",
+                e
+            )
+        })?;
 
     if secret_bytes.is_empty() {
         return Err("TOTP secret is empty".to_string());
@@ -406,15 +401,15 @@ fn generate_totp_secret() -> String {
     let mut secret = vec![0u8; 20];
     use rand::RngCore;
     rand::thread_rng().fill_bytes(&mut secret);
-    
+
     // Encode to base32 with padding (standard format)
     // 20 bytes = 160 bits, Base32 encodes 5 bits per character
     // 160 / 5 = 32 characters, padded to 40 with '='
     let encoded = BASE32.encode(&secret);
-    
+
     // println!("Generated TOTP secret: {:?}", encoded);
     // println!("Secret length: {}", encoded.len());
-    
+
     encoded
 }
 
@@ -422,7 +417,7 @@ fn generate_totp_secret() -> String {
 fn get_totp_qr_url(secret: String, account_name: String, issuer: String) -> String {
     // Remove padding for the QR code URL (standard practice)
     let clean_secret = secret.replace("=", "");
-    
+
     format!(
         "otpauth://totp/{}:{}?secret={}&issuer={}",
         urlencoding::encode(&issuer),
@@ -441,7 +436,7 @@ fn export_data(state: tauri::State<Mutex<AppState>>) -> Result<String, String> {
 
     // 读取加密的数据文件内容
     let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
-    
+
     Ok(data)
 }
 
@@ -454,7 +449,10 @@ struct ChromePasswordEntry {
 }
 
 #[tauri::command]
-fn import_chrome_csv(csv_content: String, state: tauri::State<Mutex<AppState>>) -> Result<usize, String> {
+fn import_chrome_csv(
+    csv_content: String,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<usize, String> {
     let mut app_state = state.lock().unwrap();
     if app_state.encryption_key.is_none() {
         return Err("Not authenticated".to_string());
@@ -469,7 +467,7 @@ fn import_chrome_csv(csv_content: String, state: tauri::State<Mutex<AppState>>) 
 
     for result in reader.deserialize() {
         let chrome_entry: ChromePasswordEntry = result.map_err(|e| e.to_string())?;
-        
+
         let entry = PasswordEntry {
             id: uuid::Uuid::new_v4().to_string(),
             title: chrome_entry.name,
@@ -506,28 +504,31 @@ fn import_encrypted_data(
     }
 
     // 解析导入的JSON
-    let import_data: StorageData = serde_json::from_str(&encrypted_json)
-        .map_err(|e| format!("导入文件格式错误: {}", e))?;
+    let import_data: StorageData =
+        serde_json::from_str(&encrypted_json).map_err(|e| format!("导入文件格式错误: {}", e))?;
 
     // 验证密码
     let parsed_hash = PasswordHash::new(&import_data.master_password_hash)
         .map_err(|e| format!("密码哈希无效: {}", e))?;
-    
+
     let argon2 = Argon2::default();
-    if argon2.verify_password(password.as_bytes(), &parsed_hash).is_err() {
+    if argon2
+        .verify_password(password.as_bytes(), &parsed_hash)
+        .is_err()
+    {
         return Err("导入文件的密码错误".to_string());
     }
 
     // 解密数据
     let key = derive_key(&password);
     let decrypted = decrypt_data(&import_data.encrypted_data, &import_data.nonce, &key)?;
-    let import_entries: Vec<PasswordEntry> = serde_json::from_str(&decrypted)
-        .map_err(|e| format!("数据解密失败: {}", e))?;
+    let import_entries: Vec<PasswordEntry> =
+        serde_json::from_str(&decrypted).map_err(|e| format!("数据解密失败: {}", e))?;
 
     // 合并到现有数据（避免ID冲突）
-    let existing_ids: std::collections::HashSet<String> = 
+    let existing_ids: std::collections::HashSet<String> =
         app_state.entries.iter().map(|e| e.id.clone()).collect();
-    
+
     let mut imported_count = 0;
     for mut entry in import_entries {
         if !existing_ids.contains(&entry.id) {

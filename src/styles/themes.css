@@ -79,3 +79,102 @@
   --shadow-hover: rgba(0, 0, 0, 0.15);
 }
 
+/* 毛玻璃主题 */
+:root[data-theme="glass"] {
+  --primary-start: #6b9bd1;
+  --primary-end: #4a7ba7;
+  --bg-color: #dce8f0;
+  --card-bg: rgba(255, 255, 255, 0.7);
+  --text-primary: #2c3e50;
+  --text-secondary: #5a6c7d;
+  --border-color: rgba(101, 99, 99, 0.3);
+  --shadow: rgba(0, 0, 0, 0.08);
+  --shadow-hover: rgba(0, 0, 0, 0.12);
+  --glass-blur: blur(20px);
+  --glass-border: rgba(255, 255, 255, 0.5);
+}
+
+
+
+/* 毛玻璃主题特殊样式 */
+:root[data-theme="glass"] .sidebar {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border-right: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme="glass"] .password-list-container,
+:root[data-theme="glass"] .settings-container,
+:root[data-theme="glass"] .generator-view-container {
+  background: linear-gradient(135deg, #dce8f0 0%, #c8dae8 100%);
+}
+
+:root[data-theme="glass"] .entry-card,
+:root[data-theme="glass"] .settings-section,
+:root[data-theme="glass"] .generator-card,
+:root[data-theme="glass"] .list-header {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme="glass"] .entry-card:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  border-color: rgba(107, 155, 209, 0.3);
+}
+
+:root[data-theme="glass"] .info-row {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+:root[data-theme="glass"] .info-row:hover {
+  background: rgba(255, 255, 255, 0.7);
+}
+
+
+
+:root[data-theme="glass"] .search-bar input {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+:root[data-theme="glass"] .search-bar input:focus {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(107, 155, 209, 0.6);
+}
+
+:root[data-theme="glass"] .drag-hint {
+  background: rgba(107, 155, 209, 0.15);
+  border-left-color: rgba(107, 155, 209, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+:root[data-theme="glass"] .nav-item,
+:root[data-theme="glass"] .user-info,
+:root[data-theme="glass"] .lock-btn{
+  color: rgba(28, 30, 31, 0.7);
+}
+
+:root[data-theme="glass"] .nav-item:hover {
+  background: rgba(255, 255, 255, 0.3);
+  color: rgba(44, 62, 80, 0.9);
+}
+
+:root[data-theme="glass"] .nav-item.active {
+  background: rgba(255, 255, 255, 0.5);
+  color: rgba(44, 62, 80, 1);
+}
+
+:root[data-theme="glass"] .logo-text {
+  color: rgba(44, 62, 80, 0.9);
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.5);
+}

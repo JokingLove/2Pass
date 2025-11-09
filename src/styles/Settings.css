@@ -7,10 +7,11 @@
 
 .settings-header {
   background: var(--card-bg);
-  border-radius: 16px;
-  padding: 32px;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 12px var(--shadow);
+  border-radius: 20px;
+  padding: 36px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 24px var(--shadow);
+  border: 1px solid var(--border-color);
 }
 
 .settings-header h1 {
@@ -27,9 +28,10 @@
 
 .settings-section {
   background: var(--card-bg);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 12px var(--shadow);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 8px 24px var(--shadow);
+  border: 1px solid var(--border-color);
   animation: slideUp 0.3s ease-out;
 }
 
@@ -126,15 +128,15 @@
 }
 
 .time-option {
-  padding: 10px 20px;
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 12px 22px;
+  background: rgba(248, 249, 250, 0.8);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.25s;
-  color: #666;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-secondary);
 }
 
 .time-option:hover {

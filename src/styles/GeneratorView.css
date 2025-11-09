@@ -6,11 +6,12 @@
 }
 
 .generator-view-header {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 36px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 24px var(--shadow);
+  border: 1px solid var(--border-color);
   animation: fadeIn 0.5s ease-out;
 }
 
@@ -42,10 +43,11 @@
 }
 
 .generator-card {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 36px;
+  box-shadow: 0 8px 24px var(--shadow);
+  border: 1px solid var(--border-color);
   animation: slideUp 0.5s ease-out;
 }
 
@@ -61,10 +63,11 @@
 }
 
 .result-card {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 36px;
+  box-shadow: 0 8px 24px var(--shadow);
+  border: 1px solid var(--border-color);
   animation: slideIn 0.3s ease-out;
 }
 
@@ -89,10 +92,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 20px;
+  padding: 24px;
   background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
-  border-radius: 12px;
-  margin-bottom: 16px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
 }
 
 .result-password {

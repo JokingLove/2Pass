@@ -38,6 +38,7 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
     { value: "turquoise", label: "翡翠森林", preview: "linear-gradient(135deg, #00ffc4 0%, #00f6aa 33%, #00e5a1 66%, #00c08f 100%)" },
     { value: "sky-blue", label: "晴空万里", preview: "linear-gradient(135deg, #56ccf2 0%, #2f80ed 100%)" },
     { value: "bulma", label: "清新薄荷", preview: "linear-gradient(135deg, #00d1b2 0%, #00a896 100%)" },
+    { value: "glass", label: "毛玻璃", preview: "linear-gradient(135deg, #dce8f0 0%, #b8d4e6 100%)" },
   ];
 
   const handleExportData = async () => {
