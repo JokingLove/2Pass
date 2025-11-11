@@ -6,12 +6,12 @@ use argon2::password_hash::SaltString;
 use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use base64::{engine::general_purpose, Engine as _};
 use data_encoding::{BASE32, BASE32_NOPAD};
-use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::Manager;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PasswordHistory {
@@ -51,8 +51,9 @@ struct AppState {
 }
 
 impl AppState {
-    fn new() -> Self {
-        let data_file = Self::get_data_file_path();
+    fn new(app_handle: &tauri::AppHandle) -> Self {
+        let data_file = Self::get_data_file_path(app_handle);
+        println!("📁 Data file path: {:?}", data_file);
         Self {
             data_file,
             entries: Vec::new(),
@@ -60,14 +61,30 @@ impl AppState {
         }
     }
 
-    fn get_data_file_path() -> PathBuf {
-        if let Some(proj_dirs) = ProjectDirs::from("com", "2pass", "2pass") {
-            let data_dir = proj_dirs.data_dir();
-            fs::create_dir_all(data_dir).ok();
-            data_dir.join("data.json")
-        } else {
-            PathBuf::from("data.json")
+    fn get_data_file_path(app_handle: &tauri::AppHandle) -> PathBuf {
+        // 使用 Tauri 2.0 的 API 获取应用数据目录（跨平台兼容）
+        match app_handle.path().app_data_dir() {
+            Ok(data_dir) => {
+                println!("📂 App data dir: {:?}", data_dir);
+                if let Err(e) = fs::create_dir_all(&data_dir) {
+                    eprintln!("❌ Failed to create data directory: {}", e);
+                    return Self::get_fallback_path();
+                }
+                data_dir.join("data.json")
+            }
+            Err(e) => {
+                eprintln!("❌ Failed to get app data dir: {}", e);
+                Self::get_fallback_path()
+            }
         }
+    }
+
+    fn get_fallback_path() -> PathBuf {
+        // 降级方案：使用系统临时目录
+        let temp_dir = std::env::temp_dir().join("2pass");
+        println!("⚠️ Using fallback path: {:?}", temp_dir);
+        fs::create_dir_all(&temp_dir).ok();
+        temp_dir.join("data.json")
     }
 }
 
@@ -550,7 +567,12 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())
-        .manage(Mutex::new(AppState::new()))
+        .setup(|app| {
+            let app_handle = app.handle().clone();
+            let app_state = AppState::new(&app_handle);
+            app.manage(Mutex::new(app_state));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             check_master_password_exists,
             create_master_password,

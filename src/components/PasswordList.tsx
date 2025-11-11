@@ -179,27 +179,32 @@ function SortablePasswordCard({
           )}
         </div>
         <div className="entry-actions">
+          {/* 快速复制用户名按钮 */}
+          <button
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              await onCopyToClipboard(entry.username, `quick-user-${entry.id}`);
+            }}
+            className={`action-btn quick-copy-user-btn ${copiedId === `quick-user-${entry.id}` ? 'copied' : ''}`}
+            title="快速复制用户名"
+          >
+            {copiedId === `quick-user-${entry.id}` ? "✓" : "👤"}
+          </button>
+          {/* 快速复制密码按钮 */}
           <button
             onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
               
-              console.log('🔵 快速复制按钮被点击');
-              console.log('🔵 entry.totp_secret:', entry.totp_secret);
-              
               // 如果有 TOTP，复制组合密码
               if (entry.totp_secret) {
                 try {
-                  console.log('🔵 开始生成 TOTP...');
                   // 立即生成 TOTP 并复制
                   const { invoke } = await import("@tauri-apps/api/core");
                   const totpCode = await invoke<string>("generate_totp", { secret: entry.totp_secret });
-                  console.log('🔵 TOTP 生成成功:', totpCode);
                   const combinedPassword = entry.password + totpCode;
-                  console.log('🔵 组合密码:', combinedPassword);
-                  console.log('🔵 开始复制到剪贴板...');
                   await onCopyToClipboard(combinedPassword, `quick-${entry.id}`);
-                  console.log('🔵 复制完成');
                 } catch (err) {
                   console.error("❌ Failed to generate TOTP:", err);
                   // 如果生成失败，复制普通密码
@@ -207,14 +212,13 @@ function SortablePasswordCard({
                 }
               } else {
                 // 没有 TOTP，复制普通密码
-                console.log('🔵 没有 TOTP，复制普通密码');
                 await onCopyToClipboard(entry.password, `quick-${entry.id}`);
               }
             }}
             className={`action-btn quick-copy-btn ${copiedId === `quick-${entry.id}` ? 'copied' : ''}`}
             title={entry.totp_secret ? "快速复制组合密码" : "快速复制密码"}
           >
-            {copiedId === `quick-${entry.id}` ? "✓" : "📋"}
+            {copiedId === `quick-${entry.id}` ? "✓" : "🔑"}
           </button>
           <button
             onClick={(e) => {
