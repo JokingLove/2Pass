@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "2Pass - 密码管理器",
+        "title": "",
         "width": 1200,
         "height": 800,
         "minWidth": 900,
