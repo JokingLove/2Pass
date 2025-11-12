@@ -63,7 +63,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: '2Pass ${{ github.ref_name }}'
+          releaseName: '${{ github.ref_name }}'
           releaseBody: |
             ## 🎉 2Pass ${{ github.ref_name }}
             
@@ -87,7 +87,7 @@ jobs:
             
             ---
             
-            **Full Changelog**: https://github.com/yourusername/2pass/compare/v1.2.0...v1.2.1
+            **Full Changelog**: https://github.com/JokingLove/2pass/compare/v1.2.0...v1.2.1
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
