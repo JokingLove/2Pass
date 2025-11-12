@@ -14,10 +14,20 @@ export interface PasswordEntry {
   notes: string;
   totp_secret?: string; // TOTP secret in base32 format
   tags?: string[]; // 标签列表
+  group_id?: string; // 所属分组ID
   sort_order?: number; // 排序顺序
   created_at: number;
   updated_at: number;
   history?: PasswordHistory[] | undefined; // 修改历史
+}
+
+export interface PasswordGroup {
+  id: string;
+  name: string;
+  icon: string;
+  color?: string;
+  sort_order: number;
+  created_at: number;
 }
 
 export interface LoginProps {
@@ -36,6 +46,8 @@ export interface PasswordListProps {
 
 export interface PasswordFormProps {
   entry?: PasswordEntry;
+  groups: PasswordGroup[];
+  selectedGroupId?: string | null;
   onSave: (entry: PasswordEntry) => void;
   onCancel: () => void;
 }

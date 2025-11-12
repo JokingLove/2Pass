@@ -5,7 +5,7 @@ interface PasswordGeneratorProps {
   onGenerate: (password: string) => void;
 }
 
-function PasswordGenerator({ onGenerate }: PasswordGeneratorProps) {
+function PasswordGenerator({  }: PasswordGeneratorProps) {
   const [length, setLength] = useState(16);
   const [includeUppercase, setIncludeUppercase] = useState(true);
   const [includeLowercase, setIncludeLowercase] = useState(true);
@@ -36,9 +36,14 @@ function PasswordGenerator({ onGenerate }: PasswordGeneratorProps) {
     setGeneratedPassword(password);
   };
 
-  const copyAndUse = () => {
+  const copyToClipboard = async () => {
     if (generatedPassword) {
-      onGenerate(generatedPassword);
+      try {
+        await navigator.clipboard.writeText(generatedPassword);
+        // 可以添加一个提示，但这里简化处理
+      } catch (err) {
+        console.error("复制失败:", err);
+      }
     }
   };
 
@@ -114,13 +119,25 @@ function PasswordGenerator({ onGenerate }: PasswordGeneratorProps) {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={generatePassword}
-        className="generate-button"
-      >
-        生成密码
-      </button>
+      <div className="generator-actions">
+        <button
+          type="button"
+          onClick={generatePassword}
+          className="generate-button"
+        >
+          生成密码
+        </button>
+        {generatedPassword && (
+          <button
+            type="button"
+            onClick={copyToClipboard}
+            className="copy-button"
+            title="复制到剪贴板"
+          >
+            📋 复制
+          </button>
+        )}
+      </div>
 
       {generatedPassword && (
         <div className="generated-result">
@@ -135,13 +152,6 @@ function PasswordGenerator({ onGenerate }: PasswordGeneratorProps) {
               </span>
             )}
           </div>
-          <button
-            type="button"
-            onClick={copyAndUse}
-            className="use-password-btn"
-          >
-            ✓ 使用此密码
-          </button>
         </div>
       )}
     </div>

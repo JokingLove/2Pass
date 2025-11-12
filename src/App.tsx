@@ -1,25 +1,33 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import Login from "./components/Login";
-import Sidebar from "./components/Sidebar";
+import GroupList from "./components/GroupList";
+import GroupForm from "./components/GroupForm";
 import PasswordList from "./components/PasswordList";
 import PasswordForm from "./components/PasswordForm";
 import GeneratorView from "./components/GeneratorView";
 import Settings from "./components/Settings";
 import About from "./components/About";
-import { PasswordEntry } from "./types";
+import ToastContainer from "./components/ToastContainer";
+import { PasswordEntry, PasswordGroup } from "./types";
 import { useKeyboard } from "./hooks/useKeyboard";
+import { useToast } from "./hooks/useToast";
 import "./App.css";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState("passwords");
   const [entries, setEntries] = useState<PasswordEntry[]>([]);
+  const [groups, setGroups] = useState<PasswordGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<PasswordEntry | undefined>();
+  const [editingGroup, setEditingGroup] = useState<PasswordGroup | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(0); // 0 表示禁用，单位：分钟
   const [theme, setTheme] = useState<string>("default");
+  const toast = useToast();
 
   useEffect(() => {
     // 加载主题设置
@@ -31,6 +39,7 @@ function App() {
   useEffect(() => {
     if (isAuthenticated) {
       loadEntries();
+      loadGroups();
       // 加载自动锁定设置
       const savedTimeout = localStorage.getItem("autoLockTimeout");
       if (savedTimeout) {
@@ -79,6 +88,17 @@ function App() {
       setEntries(data);
     } catch (error) {
       console.error("Failed to load entries:", error);
+    }
+  };
+
+  const loadGroups = async () => {
+    try {
+      const data = await invoke<PasswordGroup[]>("get_all_groups");
+      setGroups(data);
+    } catch (error) {
+      console.error("Failed to load groups:", error);
+      // 如果后端还没实现，使用默认分组
+      setGroups([]);
     }
   };
 
@@ -146,9 +166,10 @@ function App() {
       await loadEntries();
       setShowForm(false);
       setEditingEntry(undefined);
+      toast.success(editingEntry ? "密码已更新" : "密码已添加");
     } catch (error) {
       console.error("Failed to save entry:", error);
-      alert("保存失败：" + error);
+      toast.error("保存失败：" + error);
     }
   };
 
@@ -156,9 +177,10 @@ function App() {
     try {
       await invoke("delete_entry", { id });
       await loadEntries();
+      toast.success("密码已删除");
     } catch (error) {
       console.error("Failed to delete entry:", error);
-      alert("删除失败：" + error);
+      toast.error("删除失败：" + error);
     }
   };
 
@@ -177,7 +199,7 @@ function App() {
       console.log("数据重新加载完成");
     } catch (error) {
       console.error("Failed to update order:", error);
-      alert("更新顺序失败：" + error);
+      toast.error("更新顺序失败：" + error);
     }
   };
 
@@ -195,7 +217,56 @@ function App() {
   const handleLock = () => {
     setIsAuthenticated(false);
     setEntries([]);
+    setGroups([]);
     setCurrentView("passwords");
+  };
+
+  const handleAddGroup = () => {
+    setEditingGroup(undefined);
+    setShowGroupForm(true);
+  };
+
+  const handleEditGroup = (group: PasswordGroup) => {
+    setEditingGroup(group);
+    setShowGroupForm(true);
+  };
+
+  const handleSaveGroup = async (groupData: Partial<PasswordGroup>) => {
+    try {
+      if (editingGroup) {
+        await invoke("update_group", { group: { ...editingGroup, ...groupData } });
+      } else {
+        const newGroup: PasswordGroup = {
+          id: crypto.randomUUID(),
+          name: groupData.name!,
+          icon: groupData.icon!,
+          sort_order: groups.length,
+          created_at: Date.now(),
+        };
+        await invoke("add_group", { group: newGroup });
+      }
+      await loadGroups();
+      setShowGroupForm(false);
+      setEditingGroup(undefined);
+      toast.success(editingGroup ? "分组已更新" : "分组已创建");
+    } catch (error) {
+      console.error("Failed to save group:", error);
+      toast.error("保存分组失败：" + error);
+    }
+  };
+
+  const handleDeleteGroup = async (groupId: string) => {
+    try {
+      await invoke("delete_group", { id: groupId });
+      await loadGroups();
+      if (selectedGroupId === groupId) {
+        setSelectedGroupId(null);
+      }
+      toast.success("分组已删除");
+    } catch (error) {
+      console.error("Failed to delete group:", error);
+      toast.error("删除分组失败：" + error);
+    }
   };
 
   const handleAutoLockChange = (minutes: number) => {
@@ -223,19 +294,42 @@ function App() {
     },
   });
 
+  // 计算每个分组的密码数量
+  const entryCountByGroup = entries.reduce((acc, entry) => {
+    const groupId = entry.group_id || "ungrouped";
+    acc[groupId] = (acc[groupId] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // 根据选中的分组过滤密码
+  const filteredEntries = selectedGroupId
+    ? entries.filter((entry) => entry.group_id === selectedGroupId)
+    : entries;
+
   const renderView = () => {
     switch (currentView) {
       case "passwords":
         return (
-          <PasswordList
-            entries={entries}
-            onEdit={handleEditEntry}
-            onDelete={handleDeleteEntry}
-            onAdd={handleAddEntry}
-            onUpdateOrder={handleUpdateOrder}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-          />
+          <div className="three-column-layout">
+            <GroupList
+              groups={groups}
+              selectedGroupId={selectedGroupId}
+              onSelectGroup={setSelectedGroupId}
+              onAddGroup={handleAddGroup}
+              onEditGroup={handleEditGroup}
+              onDeleteGroup={handleDeleteGroup}
+              entryCountByGroup={entryCountByGroup}
+            />
+            <PasswordList
+              entries={filteredEntries}
+              onEdit={handleEditEntry}
+              onDelete={handleDeleteEntry}
+              onAdd={handleAddEntry}
+              onUpdateOrder={handleUpdateOrder}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+            />
+          </div>
         );
       case "generator":
         return <GeneratorView />;
@@ -254,15 +348,26 @@ function App() {
         return <About />;
       default:
         return (
-          <PasswordList
-            entries={entries}
-            onEdit={handleEditEntry}
-            onDelete={handleDeleteEntry}
-            onAdd={handleAddEntry}
-            onUpdateOrder={handleUpdateOrder}
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-          />
+          <div className="three-column-layout">
+            <GroupList
+              groups={groups}
+              selectedGroupId={selectedGroupId}
+              onSelectGroup={setSelectedGroupId}
+              onAddGroup={handleAddGroup}
+              onEditGroup={handleEditGroup}
+              onDeleteGroup={handleDeleteGroup}
+              entryCountByGroup={entryCountByGroup}
+            />
+            <PasswordList
+              entries={filteredEntries}
+              onEdit={handleEditEntry}
+              onDelete={handleDeleteEntry}
+              onAdd={handleAddEntry}
+              onUpdateOrder={handleUpdateOrder}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+            />
+          </div>
         );
     }
   };
@@ -272,23 +377,74 @@ function App() {
   }
 
   return (
-    <div className="app-layout">
-      <Sidebar
-        currentView={currentView}
-        onViewChange={handleViewChange}
-        entryCount={entries.length}
-        onLock={handleLock}
-      />
-      <main className="main-content">
+    <div className="app-container">
+      {/* 顶部工具栏 */}
+      <header className="app-header">
+        <div className="header-left">
+          <span className="app-logo">🔐</span>
+          <span className="app-title">2Pass</span>
+        </div>
+        <nav className="header-nav">
+          <button
+            className={`nav-btn ${currentView === "passwords" ? "active" : ""}`}
+            onClick={() => handleViewChange("passwords")}
+          >
+            🔐 密码
+          </button>
+          <button
+            className={`nav-btn ${currentView === "generator" ? "active" : ""}`}
+            onClick={() => handleViewChange("generator")}
+          >
+            🎲 生成器
+          </button>
+          <button
+            className={`nav-btn ${currentView === "settings" ? "active" : ""}`}
+            onClick={() => handleViewChange("settings")}
+          >
+            ⚙️ 设置
+          </button>
+          <button
+            className={`nav-btn ${currentView === "about" ? "active" : ""}`}
+            onClick={() => handleViewChange("about")}
+          >
+            ℹ️ 关于
+          </button>
+        </nav>
+        <div className="header-right">
+          <button onClick={handleLock} className="lock-btn" title="锁定应用">
+            🔒 锁定
+          </button>
+        </div>
+      </header>
+
+      {/* 主内容区 */}
+      <main className="app-main">
         {renderView()}
       </main>
+
+      {/* 弹窗 */}
       {showForm && (
         <PasswordForm
           entry={editingEntry}
+          groups={groups}
+          selectedGroupId={selectedGroupId}
           onSave={handleSaveEntry}
           onCancel={handleCancelForm}
         />
       )}
+      {showGroupForm && (
+        <GroupForm
+          group={editingGroup}
+          onSave={handleSaveGroup}
+          onCancel={() => {
+            setShowGroupForm(false);
+            setEditingGroup(undefined);
+          }}
+        />
+      )}
+
+      {/* Toast 通知 */}
+      <ToastContainer toasts={toast.toasts} onClose={toast.removeToast} />
     </div>
   );
 }

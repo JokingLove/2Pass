@@ -31,10 +31,21 @@ pub struct PasswordEntry {
     pub notes: String,
     pub totp_secret: Option<String>, // TOTP secret in base32 format
     pub tags: Option<Vec<String>>,   // 标签列表
+    pub group_id: Option<String>,    // 所属分组ID
     pub sort_order: Option<i64>,     // 排序顺序
     pub created_at: i64,
     pub updated_at: i64,
     pub history: Option<Vec<PasswordHistory>>, // 修改历史
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PasswordGroup {
+    pub id: String,
+    pub name: String,
+    pub icon: String,
+    pub color: Option<String>,
+    pub sort_order: i64,
+    pub created_at: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -44,9 +55,16 @@ struct StorageData {
     nonce: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct AppData {
+    entries: Vec<PasswordEntry>,
+    groups: Vec<PasswordGroup>,
+}
+
 struct AppState {
     data_file: PathBuf,
     entries: Vec<PasswordEntry>,
+    groups: Vec<PasswordGroup>,
     encryption_key: Option<Vec<u8>>,
 }
 
@@ -57,6 +75,7 @@ impl AppState {
         Self {
             data_file,
             entries: Vec::new(),
+            groups: Vec::new(),
             encryption_key: None,
         }
     }
@@ -195,11 +214,20 @@ fn verify_master_password(
     {
         let key = derive_key(&master_password);
         let decrypted = decrypt_data(&storage_data.encrypted_data, &storage_data.nonce, &key)?;
-        let entries: Vec<PasswordEntry> = serde_json::from_str(&decrypted).unwrap_or_default();
+        
+        // 尝试解析新格式（包含 groups）
+        let app_data: Result<AppData, _> = serde_json::from_str(&decrypted);
+        if let Ok(data) = app_data {
+            app_state.entries = data.entries;
+            app_state.groups = data.groups;
+        } else {
+            // 兼容旧格式（只有 entries）
+            let entries: Vec<PasswordEntry> = serde_json::from_str(&decrypted).unwrap_or_default();
+            app_state.entries = entries;
+            app_state.groups = Vec::new();
+        }
 
         app_state.encryption_key = Some(key);
-        app_state.entries = entries;
-
         Ok(true)
     } else {
         Ok(false)
@@ -229,6 +257,70 @@ fn add_entry(
     save_entries(&mut app_state)?;
 
     Ok(entry)
+}
+
+// 分组相关命令
+#[tauri::command]
+fn get_all_groups(state: tauri::State<Mutex<AppState>>) -> Result<Vec<PasswordGroup>, String> {
+    let app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+    Ok(app_state.groups.clone())
+}
+
+#[tauri::command]
+fn add_group(
+    group: PasswordGroup,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<PasswordGroup, String> {
+    let mut app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+
+    app_state.groups.push(group.clone());
+    save_entries(&mut app_state)?;
+
+    Ok(group)
+}
+
+#[tauri::command]
+fn update_group(
+    group: PasswordGroup,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<(), String> {
+    let mut app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+
+    if let Some(existing) = app_state.groups.iter_mut().find(|g| g.id == group.id) {
+        *existing = group;
+        save_entries(&mut app_state)?;
+        Ok(())
+    } else {
+        Err("Group not found".to_string())
+    }
+}
+
+#[tauri::command]
+fn delete_group(id: String, state: tauri::State<Mutex<AppState>>) -> Result<(), String> {
+    let mut app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+
+    // 检查是否有密码使用此分组
+    let has_entries = app_state.entries.iter().any(|e| e.group_id.as_ref() == Some(&id));
+    if has_entries {
+        return Err("Cannot delete group with entries".to_string());
+    }
+
+    app_state.groups.retain(|g| g.id != id);
+    save_entries(&mut app_state)?;
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -327,8 +419,13 @@ fn save_entries(app_state: &mut AppState) -> Result<(), String> {
         .as_ref()
         .ok_or("No encryption key")?;
 
-    let entries_json = serde_json::to_string(&app_state.entries).unwrap();
-    let (encrypted_data, nonce) = encrypt_data(&entries_json, key)?;
+    // 保存包含 entries 和 groups 的完整数据
+    let app_data = AppData {
+        entries: app_state.entries.clone(),
+        groups: app_state.groups.clone(),
+    };
+    let data_json = serde_json::to_string(&app_data).unwrap();
+    let (encrypted_data, nonce) = encrypt_data(&data_json, key)?;
 
     let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
     let mut storage_data: StorageData = serde_json::from_str(&data).map_err(|e| e.to_string())?;
@@ -494,6 +591,7 @@ fn import_chrome_csv(
             notes: String::from("从 Chrome 导入"),
             totp_secret: None,
             tags: Some(vec![String::from("Chrome")]),
+            group_id: None,
             sort_order: Some((app_state.entries.len() + imported_count) as i64),
             created_at: now,
             updated_at: now,
@@ -581,6 +679,10 @@ pub fn run() {
             add_entry,
             update_entry,
             delete_entry,
+            get_all_groups,
+            add_group,
+            update_group,
+            delete_group,
             change_master_password,
             generate_totp,
             generate_totp_secret,

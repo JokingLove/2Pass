@@ -1,95 +1,209 @@
 /* 主题系统 - CSS 变量 */
 
-/* 默认主题（紫色渐变） */
+/* 默认主题（2Pass 紫蓝渐变 - 与图标配色一致） */
 :root,
 :root[data-theme="default"] {
   --primary-start: #667eea;
   --primary-end: #764ba2;
-  --bg-color: #f6f6f6;
+  --primary-color: #667eea;
+  --primary-hover: #5668d8;
+  --primary-light: rgba(102, 126, 234, 0.1);
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f3ff;
+  --bg-tertiary: #ede9fe;
+  --bg-color: #faf9ff;
   --card-bg: #ffffff;
-  --text-primary: #333333;
-  --text-secondary: #666666;
-  --border-color: #e0e0e0;
-  --shadow: rgba(0, 0, 0, 0.1);
-  --shadow-hover: rgba(0, 0, 0, 0.15);
-}
-
-/* 蓝绿渐变主题 */
-:root[data-theme="cyan"] {
-  --primary-start: #07aeea;
-  --primary-end: #2bf598;
-  --bg-color: #f0f9ff;
-  --card-bg: #ffffff;
-  --text-primary: #1a3a4a;
-  --text-secondary: #4a6a7a;
-  --border-color: #b8e6f0;
-  --shadow: rgba(7, 174, 234, 0.1);
-  --shadow-hover: rgba(7, 174, 234, 0.15);
-}
-
-/* 紫粉渐变主题 */
-:root[data-theme="purple-pink"] {
-  --primary-start: #312c8d;
-  --primary-end: #ffc5ff;
-  --bg-color: #f8f5ff;
-  --card-bg: #ffffff;
-  --text-primary: #2a1a4a;
-  --text-secondary: #5a4a7a;
-  --border-color: #e0d0ff;
-  --shadow: rgba(49, 44, 141, 0.1);
-  --shadow-hover: rgba(49, 44, 141, 0.15);
-}
-
-/* 青色渐变主题 */
-:root[data-theme="turquoise"] {
-  --primary-start: #00ffc4;
-  --primary-end: #00c08f;
-  --bg-color: #f0fff9;
-  --card-bg: #ffffff;
-  --text-primary: #1a4a3a;
-  --text-secondary: #4a7a6a;
-  --border-color: #b8f0e0;
-  --shadow: rgba(0, 255, 196, 0.1);
-  --shadow-hover: rgba(0, 255, 196, 0.15);
+  
+  --text-primary: #4c1d95;
+  --text-secondary: #6d28d9;
+  --text-tertiary: #8b5cf6;
+  
+  --border-color: #c4b5fd;
+  --border-light: #ddd6fe;
+  --hover-bg: #f5f3ff;
+  
+  --shadow-sm: 0 1px 3px rgba(102, 126, 234, 0.05);
+  --shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
+  --shadow-md: 0 4px 12px rgba(102, 126, 234, 0.1);
+  --shadow-lg: 0 8px 24px rgba(102, 126, 234, 0.12);
+  
+  --success-color: #86efac;
+  --warning-color: #fcd34d;
+  --danger-color: #fca5a5;
+  --info-color: #a78bfa;
 }
 
 /* 天蓝色主题 */
 :root[data-theme="sky-blue"] {
-  --primary-start: #56ccf2;
-  --primary-end: #2f80ed;
-  --bg-color: #f0f8ff;
+  --primary-start: #93c5fd;
+  --primary-end: #7dd3fc;
+  --primary-color: #93c5fd;
+  --primary-hover: #83b5ed;
+  --primary-light: rgba(147, 197, 253, 0.1);
+  --primary-gradient: linear-gradient(135deg, #93c5fd 0%, #7dd3fc 100%);
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #eff6ff;
+  --bg-tertiary: #dbeafe;
+  --bg-color: #f8fbff;
   --card-bg: #ffffff;
-  --text-primary: #1a365d;
-  --text-secondary: #4a5f7f;
-  --border-color: #bee3f8;
-  --shadow: rgba(47, 128, 237, 0.1);
-  --shadow-hover: rgba(47, 128, 237, 0.15);
+  
+  --text-primary: #1e3a8a;
+  --text-secondary: #2563eb;
+  --text-tertiary: #93c5fd;
+  
+  --border-color: #bfdbfe;
+  --border-light: #dbeafe;
+  --hover-bg: #eff6ff;
+  
+  --shadow-sm: 0 1px 3px rgba(59, 130, 246, 0.05);
+  --shadow: 0 2px 8px rgba(59, 130, 246, 0.08);
+  --shadow-md: 0 4px 12px rgba(59, 130, 246, 0.1);
+  --shadow-lg: 0 8px 24px rgba(59, 130, 246, 0.12);
+  
+  --success-color: #86efac;
+  --warning-color: #fcd34d;
+  --danger-color: #fca5a5;
+  --info-color: #93c5fd;
+}
+
+/* 紫粉渐变主题 */
+:root[data-theme="purple-pink"] {
+  --primary-start: #c4b5fd;
+  --primary-end: #f9a8d4;
+  --primary-color: #c4b5fd;
+  --primary-hover: #b4a5ed;
+  --primary-light: rgba(196, 181, 253, 0.1);
+  --primary-gradient: linear-gradient(135deg, #c4b5fd 0%, #f9a8d4 100%);
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #faf5ff;
+  --bg-tertiary: #f3e8ff;
+  --bg-color: #fdfaff;
+  --card-bg: #ffffff;
+  
+  --text-primary: #581c87;
+  --text-secondary: #7e22ce;
+  --text-tertiary: #c4b5fd;
+  
+  --border-color: #e9d5ff;
+  --border-light: #f3e8ff;
+  --hover-bg: #faf5ff;
+  
+  --shadow-sm: 0 1px 3px rgba(139, 92, 246, 0.05);
+  --shadow: 0 2px 8px rgba(139, 92, 246, 0.08);
+  --shadow-md: 0 4px 12px rgba(139, 92, 246, 0.1);
+  --shadow-lg: 0 8px 24px rgba(139, 92, 246, 0.12);
+  
+  --success-color: #a78bfa;
+  --warning-color: #fbbf24;
+  --danger-color: #f9a8d4;
+  --info-color: #c4b5fd;
+}
+
+/* 青色渐变主题 */
+:root[data-theme="turquoise"] {
+  --primary-start: #5eead4;
+  --primary-end: #6ee7b7;
+  --primary-color: #5eead4;
+  --primary-hover: #4ed9c4;
+  --primary-light: rgba(94, 234, 212, 0.1);
+  --primary-gradient: linear-gradient(135deg, #5eead4 0%, #6ee7b7 100%);
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #f0fdfa;
+  --bg-tertiary: #ccfbf1;
+  --bg-color: #f7fffe;
+  --card-bg: #ffffff;
+  
+  --text-primary: #134e4a;
+  --text-secondary: #0f766e;
+  --text-tertiary: #5eead4;
+  
+  --border-color: #99f6e4;
+  --border-light: #ccfbf1;
+  --hover-bg: #f0fdfa;
+  
+  --shadow-sm: 0 1px 3px rgba(20, 184, 166, 0.05);
+  --shadow: 0 2px 8px rgba(20, 184, 166, 0.08);
+  --shadow-md: 0 4px 12px rgba(20, 184, 166, 0.1);
+  --shadow-lg: 0 8px 24px rgba(20, 184, 166, 0.12);
+  
+  --success-color: #6ee7b7;
+  --warning-color: #fcd34d;
+  --danger-color: #fca5a5;
+  --info-color: #5eead4;
 }
 
 /* Bulma 风格主题 */
 :root[data-theme="bulma"] {
-  --primary-start: #00d1b2;
-  --primary-end: #00a896;
-  --bg-color: #f5f5f5;
+  --primary-start: #5eead4;
+  --primary-end: #34d399;
+  --primary-color: #5eead4;
+  --primary-hover: #4ed9c4;
+  --primary-light: rgba(94, 234, 212, 0.1);
+  --primary-gradient: linear-gradient(135deg, #5eead4 0%, #34d399 100%);
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #eeeeee;
+  --bg-color: #fafafa;
   --card-bg: #ffffff;
+  
   --text-primary: #363636;
   --text-secondary: #7a7a7a;
+  --text-tertiary: #b5b5b5;
+  
   --border-color: #dbdbdb;
-  --shadow: rgba(0, 0, 0, 0.1);
-  --shadow-hover: rgba(0, 0, 0, 0.15);
+  --border-light: #ededed;
+  --hover-bg: #f5f5f5;
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  
+  --success-color: #86efac;
+  --warning-color: #fcd34d;
+  --danger-color: #fca5a5;
+  --info-color: #7dd3fc;
 }
 
 /* 毛玻璃主题 */
 :root[data-theme="glass"] {
-  --primary-start: #6b9bd1;
-  --primary-end: #4a7ba7;
-  --bg-color: #dce8f0;
-  --card-bg: rgba(255, 255, 255, 0.7);
-  --text-primary: #2c3e50;
-  --text-secondary: #5a6c7d;
-  --border-color: rgba(101, 99, 99, 0.3);
-  --shadow: rgba(0, 0, 0, 0.08);
-  --shadow-hover: rgba(0, 0, 0, 0.12);
+  --primary-start: #a5b4fc;
+  --primary-end: #93c5fd;
+  --primary-color: #a5b4fc;
+  --primary-hover: #95a4ec;
+  --primary-light: rgba(165, 180, 252, 0.1);
+  --primary-gradient: linear-gradient(135deg, #a5b4fc 0%, #93c5fd 100%);
+  
+  --bg-primary: rgba(255, 255, 255, 0.8);
+  --bg-secondary: rgba(248, 250, 252, 0.8);
+  --bg-tertiary: rgba(241, 245, 249, 0.8);
+  --bg-color: #e0e7ff;
+  --card-bg: rgba(255, 255, 255, 0.75);
+  
+  --text-primary: #334155;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  
+  --border-color: rgba(203, 213, 225, 0.5);
+  --border-light: rgba(226, 232, 240, 0.5);
+  --hover-bg: rgba(248, 250, 252, 0.9);
+  
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  
+  --success-color: #86efac;
+  --warning-color: #fcd34d;
+  --danger-color: #fca5a5;
+  --info-color: #a5b4fc;
+  
   --glass-blur: blur(20px);
   --glass-border: rgba(255, 255, 255, 0.5);
 }

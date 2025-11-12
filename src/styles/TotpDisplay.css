@@ -3,9 +3,9 @@
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-gradient);
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+  box-shadow: var(--shadow);
   animation: slideIn 0.2s ease-out;
 }
 
@@ -127,8 +127,8 @@
 .combined-action-btn {
   padding: 4px 8px;
   background: white;
-  color: #667eea;
-  border: 1px solid #e0e0e0;
+  color: var(--primary-color);
+  border: 1px solid var(--border-color);
   border-radius: 4px;
   font-size: 0.9rem;
   cursor: pointer;
@@ -140,8 +140,8 @@
 }
 
 .combined-action-btn:hover {
-  background: #f0f0f0;
-  border-color: #667eea;
+  background: var(--hover-bg);
+  border-color: var(--primary-color);
 }
 
 .combined-action-btn:active {

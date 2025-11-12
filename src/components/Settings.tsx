@@ -32,13 +32,12 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
   ];
 
   const themeOptions = [
-    { value: "default", label: "薰衣草梦境", preview: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
-    { value: "cyan", label: "碧海蓝天", preview: "linear-gradient(135deg, #07aeea 0%, #2bf598 100%)" },
-    { value: "purple-pink", label: "星空幻境", preview: "linear-gradient(135deg, #312c8d 0%, #652de4 25%, #aa3fff 50%, #f25eff 75%, #ffc5ff 100%)" },
-    { value: "turquoise", label: "翡翠森林", preview: "linear-gradient(135deg, #00ffc4 0%, #00f6aa 33%, #00e5a1 66%, #00c08f 100%)" },
-    { value: "sky-blue", label: "晴空万里", preview: "linear-gradient(135deg, #56ccf2 0%, #2f80ed 100%)" },
-    { value: "bulma", label: "清新薄荷", preview: "linear-gradient(135deg, #00d1b2 0%, #00a896 100%)" },
-    { value: "glass", label: "毛玻璃", preview: "linear-gradient(135deg, #dce8f0 0%, #b8d4e6 100%)" },
+    { value: "default", label: "2Pass 紫蓝", preview: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
+    { value: "sky-blue", label: "晴空万里", preview: "linear-gradient(135deg, #93c5fd 0%, #7dd3fc 100%)" },
+    { value: "purple-pink", label: "星空幻境", preview: "linear-gradient(135deg, #c4b5fd 0%, #f9a8d4 100%)" },
+    { value: "turquoise", label: "翡翠森林", preview: "linear-gradient(135deg, #5eead4 0%, #6ee7b7 100%)" },
+    { value: "bulma", label: "清新薄荷", preview: "linear-gradient(135deg, #5eead4 0%, #34d399 100%)" },
+    { value: "glass", label: "毛玻璃", preview: "linear-gradient(135deg, #a5b4fc 0%, #93c5fd 100%)" },
   ];
 
   const handleExportData = async () => {

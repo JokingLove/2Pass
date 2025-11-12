@@ -1,13 +1,20 @@
-// import Changelog from "./Changelog";
+import { useState, useEffect } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import "../styles/About.css";
 
 function About() {
+  const [version, setVersion] = useState("加载中...");
+
+  useEffect(() => {
+    getVersion().then(setVersion).catch(() => setVersion("未知"));
+  }, []);
+
   return (
     <div className="about-container">
       <div className="about-header">
         <div className="about-logo">🔐</div>
         <h1>2Pass 密码管理器</h1>
-        <p className="version">版本 1.3.0</p>
+        <p className="version">版本 {version}</p>
       </div>
 
       <div className="about-content">

@@ -143,44 +143,49 @@
             // 清空画布
             ctx.clearRect(0, 0, size, size);
             
+            // macOS 图标需要留出边距，内容缩小到 82%（更符合系统规范）
+            const contentScale = 0.82;
+            const padding = size * (1 - contentScale) / 2;
+            const contentSize = size * contentScale;
+            
             // 创建渐变背景
-            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            const gradient = ctx.createLinearGradient(padding, padding, padding + contentSize, padding + contentSize);
             gradient.addColorStop(0, '#667eea');
             gradient.addColorStop(1, '#764ba2');
             
-            // 绘制圆角矩形背景
-            const cornerRadius = 220 * scale;
+            // 绘制圆角矩形背景（缩小后的）
+            const cornerRadius = 220 * scale * contentScale;
             ctx.fillStyle = gradient;
-            roundRect(ctx, 0, 0, size, size, cornerRadius);
+            roundRect(ctx, padding, padding, contentSize, contentSize, cornerRadius);
             ctx.fill();
             
             // 绘制大圆形背景装饰
             ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
             ctx.beginPath();
-            ctx.arc(centerX, centerY, 450 * scale, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, 450 * scale * contentScale, 0, Math.PI * 2);
             ctx.fill();
             
             // 绘制 2Pass 文字（主要元素）
             ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
-            ctx.font = `bold ${220 * scale}px -apple-system, BlinkMacSystemFont, sans-serif`;
+            ctx.font = `bold ${220 * scale * contentScale}px -apple-system, BlinkMacSystemFont, sans-serif`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
-            ctx.shadowBlur = 20 * scale;
-            ctx.shadowOffsetY = 8 * scale;
-            ctx.fillText('2Pass', centerX, centerY + 60 * scale);
+            ctx.shadowBlur = 20 * scale * contentScale;
+            ctx.shadowOffsetY = 8 * scale * contentScale;
+            ctx.fillText('2Pass', centerX, centerY + 60 * scale * contentScale);
             ctx.shadowBlur = 0;
             ctx.shadowOffsetY = 0;
             
             // 绘制简洁的锁图标（小装饰）
-            const lockScale = 0.7;
-            const lockY = centerY - 200 * scale;
+            const lockScale = 0.7 * contentScale;
+            const lockY = centerY - 200 * scale * contentScale;
             
             // 锁身 - 圆角矩形
             ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
             ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-            ctx.shadowBlur = 25 * scale;
-            ctx.shadowOffsetY = 8 * scale;
+            ctx.shadowBlur = 25 * scale * contentScale;
+            ctx.shadowOffsetY = 8 * scale * contentScale;
             roundRect(ctx, centerX - 80 * scale * lockScale, lockY, 
                       160 * scale * lockScale, 180 * scale * lockScale, 25 * scale * lockScale);
             ctx.fill();

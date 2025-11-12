@@ -3,25 +3,49 @@ import "../styles/ConfirmDialog.css";
 interface ConfirmDialogProps {
   title: string;
   message: string;
+  confirmText?: string;
+  cancelText?: string;
+  type?: "info" | "warning" | "danger" | "success";
   onConfirm: () => void;
   onCancel: () => void;
 }
 
-function ConfirmDialog({ title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+function ConfirmDialog({
+  title,
+  message,
+  confirmText = "确定",
+  cancelText = "取消",
+  type = "info",
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
+  const getIcon = () => {
+    switch (type) {
+      case "warning":
+        return "⚠️";
+      case "danger":
+        return "🗑️";
+      case "success":
+        return "✅";
+      default:
+        return "ℹ️";
+    }
+  };
+
   return (
-    <div className="confirm-overlay">
-      <div className="confirm-dialog">
-        <div className="confirm-icon">
-          ⚠️
-        </div>
-        <h2>{title}</h2>
-        <p>{message}</p>
+    <div className="confirm-overlay" onClick={onCancel}>
+      <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
+        <div className={`confirm-icon ${type}`}>{getIcon()}</div>
+        <h3 className="confirm-title">{title}</h3>
+        <p className="confirm-message">{message}</p>
         <div className="confirm-actions">
-          <button onClick={onCancel} className="confirm-btn cancel-btn">
-            取消
-          </button>
-          <button onClick={onConfirm} className="confirm-btn delete-btn">
-            删除
+          {cancelText && (
+            <button onClick={onCancel} className="btn-cancel">
+              {cancelText}
+            </button>
+          )}
+          <button onClick={onConfirm} className={`btn-confirm ${type}`}>
+            {confirmText}
           </button>
         </div>
       </div>
@@ -30,4 +54,3 @@ function ConfirmDialog({ title, message, onConfirm, onCancel }: ConfirmDialogPro
 }
 
 export default ConfirmDialog;
-

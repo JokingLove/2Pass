@@ -5,7 +5,7 @@ import TotpConfig from "./TotpConfig";
 import { calculateStrength, getStrengthColor, getStrengthLabel } from "../utils/passwordStrength";
 import "../styles/PasswordForm.css";
 
-function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
+function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: PasswordFormProps) {
   const [title, setTitle] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -13,6 +13,7 @@ function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
   const [notes, setNotes] = useState("");
   const [totpSecret, setTotpSecret] = useState<string | undefined>();
   const [tags, setTags] = useState<string[]>([]);
+  const [groupId, setGroupId] = useState<string | undefined>();
   const [tagInput, setTagInput] = useState("");
   const [showGenerator, setShowGenerator] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -30,8 +31,12 @@ function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
       setNotes(entry.notes);
       setTotpSecret(entry.totp_secret);
       setTags(entry.tags || []);
+      setGroupId(entry.group_id);
+    } else {
+      // 新建时使用当前选中的分组
+      setGroupId(selectedGroupId || undefined);
     }
-  }, [entry]);
+  }, [entry, selectedGroupId]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +51,7 @@ function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
       notes,
       totp_secret: totpSecret,
       tags: tags.length > 0 ? tags : undefined,
+      group_id: groupId,
       sort_order: entry?.sort_order, // 保留原有排序
       created_at: entry?.created_at || now,
       updated_at: now,
@@ -115,6 +121,25 @@ function PasswordForm({ entry, onSave, onCancel }: PasswordFormProps) {
               autoCorrect="off"
             />
           </div>
+
+          {groups.length > 0 && (
+            <div className="form-group">
+              <label htmlFor="group">📁 分组</label>
+              <select
+                id="group"
+                value={groupId || ""}
+                onChange={(e) => setGroupId(e.target.value || undefined)}
+                className="group-select"
+              >
+                <option value="">无分组</option>
+                {groups.map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.icon} {group.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="form-group">
             <label htmlFor="url">🌐 网址</label>
