@@ -1,10 +1,10 @@
 name: Build All Platforms
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   build:
@@ -13,13 +13,17 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
+            name: 'macOS-ARM64'
           - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
+            name: 'macOS-Intel'
           - platform: 'ubuntu-22.04'
-            args: ''
+            target: ''
+            name: 'Linux'
           - platform: 'windows-latest'
-            args: ''
+            target: ''
+            name: 'Windows'
 
     runs-on: ${{ matrix.platform }}
     
@@ -40,7 +44,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
 
       - name: Install dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -56,12 +60,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          args: ${{ matrix.args }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.platform }}-${{ matrix.args }}
-          path: |
-            src-tauri/target/release/bundle/
-            src-tauri/target/*/release/bundle/
+          args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}

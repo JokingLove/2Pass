@@ -15,16 +15,16 @@ jobs:
       matrix:
         include:
           - platform: 'macos-latest'
-            args: '--target aarch64-apple-darwin'
+            target: 'aarch64-apple-darwin'
             name: 'macOS-ARM64'
           - platform: 'macos-latest'
-            args: '--target x86_64-apple-darwin'
+            target: 'x86_64-apple-darwin'
             name: 'macOS-Intel'
           - platform: 'ubuntu-22.04'
-            args: ''
+            target: ''
             name: 'Linux'
           - platform: 'windows-latest'
-            args: ''
+            target: ''
             name: 'Windows'
 
     runs-on: ${{ matrix.platform }}
@@ -46,7 +46,7 @@ jobs:
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
 
       - name: Install dependencies (Ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
@@ -65,16 +65,29 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: '2Pass ${{ github.ref_name }}'
           releaseBody: |
-            ## 2Pass ${{ github.ref_name }}
+            ## 🎉 2Pass ${{ github.ref_name }}
             
-            ### 下载说明
-            - **macOS (Apple Silicon)**: 下载 `2Pass_*_aarch64.dmg`
-            - **macOS (Intel)**: 下载 `2Pass_*_x64.dmg`
-            - **Windows**: 下载 `.msi` 或 `.exe` 文件
-            - **Linux**: 下载 `.deb` 或 `.AppImage` 文件
+            ### 📥 下载说明 / Download Guide
             
-            ### 更新内容
+            **macOS:**
+            - Apple Silicon (M1/M2/M3): `2Pass_*_aarch64.dmg`
+            - Intel: `2Pass_*_x64.dmg`
+            
+            **Windows:**
+            - Installer: `2Pass_*_x64-setup.exe`
+            - MSI Package: `2Pass_*_x64_en-US.msi`
+            
+            **Linux:**
+            - Debian/Ubuntu: `2pass_*_amd64.deb`
+            - AppImage: `2pass_*_amd64.AppImage`
+            
+            ### ✨ 更新内容 / What's New
+            
             请查看下方的 Changelog
+            
+            ---
+            
+            **Full Changelog**: https://github.com/yourusername/2pass/compare/v1.2.0...v1.2.1
           releaseDraft: true
           prerelease: false
-          args: ${{ matrix.args }}
+          args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
