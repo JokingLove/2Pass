@@ -170,6 +170,8 @@ Download the latest release for your platform:
 
 [Download Latest Release →](https://github.com/yourusername/2pass/releases)
 
+> ⚠️ **macOS Users**: If you see "Cannot verify" error, run: `sudo xattr -rd com.apple.quarantine /Applications/2Pass.app`
+
 ## ⚠️ Important Notes
 
 1. **Master Password Cannot Be Recovered** - Keep it safe!
