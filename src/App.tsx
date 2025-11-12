@@ -94,7 +94,16 @@ function App() {
   const loadGroups = async () => {
     try {
       const data = await invoke<PasswordGroup[]>("get_all_groups");
-      setGroups(data);
+      // 按 sort_order 排序
+      const sorted = data.sort((a, b) => {
+        if (a.sort_order !== undefined && b.sort_order !== undefined) {
+          return a.sort_order - b.sort_order;
+        }
+        if (a.sort_order !== undefined) return -1;
+        if (b.sort_order !== undefined) return 1;
+        return a.created_at - b.created_at;
+      });
+      setGroups(sorted);
     } catch (error) {
       console.error("Failed to load groups:", error);
       // 如果后端还没实现，使用默认分组
@@ -269,6 +278,23 @@ function App() {
     }
   };
 
+  const handleUpdateGroupOrder = async (updatedGroups: PasswordGroup[]) => {
+    // 乐观更新 UI
+    setGroups(updatedGroups);
+    
+    try {
+      // 批量更新后端
+      for (const group of updatedGroups) {
+        await invoke("update_group", { group });
+      }
+    } catch (error) {
+      console.error("Failed to update group order:", error);
+      toast.error("更新分组顺序失败：" + error);
+      // 失败时重新加载
+      await loadGroups();
+    }
+  };
+
   const handleAutoLockChange = (minutes: number) => {
     setAutoLockTimeout(minutes);
     localStorage.setItem("autoLockTimeout", minutes.toString());
@@ -306,6 +332,31 @@ function App() {
     ? entries.filter((entry) => entry.group_id === selectedGroupId)
     : entries;
 
+  const handleMoveToGroup = async (entryId: string, targetGroupId: string | null) => {
+    // 找到被拖动的密码条目
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) return;
+    
+    // 如果分组没有变化，不做任何操作
+    if (entry.group_id === targetGroupId) return;
+    
+    // 更新密码的分组
+    const updatedEntry = { ...entry, group_id: targetGroupId };
+    
+    try {
+      await invoke("update_entry", { entry: updatedEntry });
+      await loadEntries();
+      
+      const groupName = targetGroupId 
+        ? groups.find(g => g.id === targetGroupId)?.name || "分组"
+        : "全部密码";
+      toast.success(`已移动到"${groupName}"`);
+    } catch (error) {
+      console.error("Failed to move entry:", error);
+      toast.error("移动失败：" + error);
+    }
+  };
+
   const renderView = () => {
     switch (currentView) {
       case "passwords":
@@ -318,6 +369,7 @@ function App() {
               onAddGroup={handleAddGroup}
               onEditGroup={handleEditGroup}
               onDeleteGroup={handleDeleteGroup}
+              onUpdateGroupOrder={handleUpdateGroupOrder}
               entryCountByGroup={entryCountByGroup}
             />
             <PasswordList
@@ -326,6 +378,7 @@ function App() {
               onDelete={handleDeleteEntry}
               onAdd={handleAddEntry}
               onUpdateOrder={handleUpdateOrder}
+              onMoveToGroup={handleMoveToGroup}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
             />
@@ -356,6 +409,7 @@ function App() {
               onAddGroup={handleAddGroup}
               onEditGroup={handleEditGroup}
               onDeleteGroup={handleDeleteGroup}
+              onUpdateGroupOrder={handleUpdateGroupOrder}
               entryCountByGroup={entryCountByGroup}
             />
             <PasswordList
@@ -364,6 +418,7 @@ function App() {
               onDelete={handleDeleteEntry}
               onAdd={handleAddEntry}
               onUpdateOrder={handleUpdateOrder}
+              onMoveToGroup={handleMoveToGroup}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
             />

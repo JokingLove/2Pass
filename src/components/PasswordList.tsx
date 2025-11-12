@@ -370,6 +370,7 @@ function PasswordList({
   onDelete,
   onAdd,
   onUpdateOrder,
+  onMoveToGroup,
   searchTerm,
   onSearchChange,
 }: PasswordListProps) {
@@ -548,12 +549,25 @@ function PasswordList({
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over || active.id === over.id) {
+    if (!over) {
       return;
     }
+
+    // 检查是否拖到分组上
+    if (over.id.toString().startsWith("group-")) {
+      const entryId = active.id.toString();
+      const targetGroupId = over.data.current?.groupId;
+      onMoveToGroup?.(entryId, targetGroupId);
+      return;
+    }
+
+    // 原有的排序逻辑
+    if (active.id === over.id) {
+      return;
+    }
+
     const oldIndex = sortedEntries.findIndex((e) => e.id === active.id);
     const newIndex = sortedEntries.findIndex((e) => e.id === over.id);
-
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const reordered = arrayMove(sortedEntries, oldIndex, newIndex);

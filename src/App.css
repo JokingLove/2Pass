@@ -176,3 +176,46 @@ button {
     flex-direction: column;
   }
 }
+
+/* 三列布局 */
+.three-column-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* DnD Kit 拖动样式 */
+.dragging {
+  opacity: 0.5;
+}
+
+/* 拖动覆盖层 - 确保拖动的元素在最上层 */
+[data-dnd-kit-overlay] {
+  position: fixed !important;
+  z-index: 99999 !important;
+  pointer-events: none !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+[data-dnd-kit-overlay] * {
+  pointer-events: none;
+}
+
+/* 拖动中的元素样式 */
+.entry-card.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.group-item.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* 确保所有 DnD 相关元素都在正确的层级 */
+body > div[style*="position: fixed"] {
+  z-index: 99999 !important;
+}
