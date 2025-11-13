@@ -36,17 +36,7 @@ function App() {
     document.documentElement.setAttribute("data-theme", savedTheme);
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadEntries();
-      loadGroups();
-      // 加载自动锁定设置
-      const savedTimeout = localStorage.getItem("autoLockTimeout");
-      if (savedTimeout) {
-        setAutoLockTimeout(parseInt(savedTimeout, 10));
-      }
-    }
-  }, [isAuthenticated]);
+
 
   // 自动锁定逻辑
   useEffect(() => {
@@ -111,8 +101,23 @@ function App() {
     }
   };
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
+  const handleLogin = async () => {
+    // 开始加载数据
+    try {
+      await Promise.all([loadEntries(), loadGroups()]);
+      
+      // 加载自动锁定设置
+      const savedTimeout = localStorage.getItem("autoLockTimeout");
+      if (savedTimeout) {
+        setAutoLockTimeout(parseInt(savedTimeout, 10));
+      }
+      
+      // 数据加载完成后才设置为已认证
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+      throw error; // 抛出错误让 Login 组件处理
+    }
   };
 
   const handleAddEntry = () => {

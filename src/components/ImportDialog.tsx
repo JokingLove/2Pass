@@ -46,13 +46,13 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
     setImportProgress(0);
 
     try {
-      // 模拟进度更新
+      // 模拟进度更新（更平滑）
       const progressInterval = setInterval(() => {
         setImportProgress((prev) => {
-          if (prev >= 90) return prev;
-          return prev + 10;
+          if (prev >= 85) return prev;
+          return prev + 5;
         });
-      }, 100);
+      }, 150);
 
       let count: number;
       
@@ -206,10 +206,11 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
           </button>
           <button
             onClick={handleImport}
-            className="import-btn"
+            className={`import-btn ${isImporting ? 'loading' : ''}`}
             disabled={isImporting || !fileContent}
           >
-            {isImporting ? "导入中..." : "开始导入"}
+            {isImporting && <span className="button-spinner"></span>}
+            <span>{isImporting ? "导入中..." : "开始导入"}</span>
           </button>
         </div>
       </div>

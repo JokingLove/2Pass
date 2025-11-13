@@ -31,7 +31,7 @@ export interface PasswordGroup {
 }
 
 export interface LoginProps {
-  onLogin: () => void;
+  onLogin: () => Promise<void>;
 }
 
 export interface PasswordListProps {

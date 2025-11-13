@@ -37,20 +37,22 @@ function Login({ onLogin }: LoginProps) {
           return;
         }
         await invoke("create_master_password", { masterPassword });
-        onLogin();
+        // 等待数据加载完成
+        await onLogin();
       } else {
         const valid = await invoke<boolean>("verify_master_password", {
           masterPassword,
         });
         if (valid) {
-          onLogin();
+          // 等待数据加载完成
+          await onLogin();
         } else {
           setError("主密码错误");
+          setLoading(false);
         }
       }
     } catch (err) {
       setError(err as string);
-    } finally {
       setLoading(false);
     }
   };
@@ -93,8 +95,9 @@ function Login({ onLogin }: LoginProps) {
 
           {error && <div className="error-message">{error}</div>}
 
-          <button type="submit" disabled={loading} className="login-button">
-            {loading ? "处理中..." : isCreating ? "创建" : "解锁"}
+          <button type="submit" disabled={loading} className={`login-button ${loading ? 'loading' : ''}`}>
+            {loading && <span className="button-spinner"></span>}
+            <span>{loading ? "处理中..." : isCreating ? "创建" : "解锁"}</span>
           </button>
         </form>
 
