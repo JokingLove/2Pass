@@ -440,10 +440,6 @@ function App() {
     <div className="app-container">
       {/* 顶部工具栏 */}
       <header className="app-header">
-        <div className="header-left">
-          <span className="app-logo">🔐</span>
-          <span className="app-title">2Pass</span>
-        </div>
         <nav className="header-nav">
           <button
             className={`nav-btn ${currentView === "passwords" ? "active" : ""}`}
