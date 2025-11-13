@@ -130,7 +130,7 @@
 }
 
 .apply-btn {
-  background: #28a745;
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
   color: white;
 }
 

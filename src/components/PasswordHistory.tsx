@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { PasswordHistory as PasswordHistoryType } from "../types";
 import "../styles/PasswordHistory.css";
 
@@ -9,6 +10,7 @@ interface PasswordHistoryProps {
 }
 
 function PasswordHistory({ history, updatedAt, isExpanded, onToggle }: PasswordHistoryProps) {
+  const { t } = useTranslation();
   const hasHistory = history && history.length > 0;
 
   return (
@@ -44,10 +46,10 @@ function PasswordHistory({ history, updatedAt, isExpanded, onToggle }: PasswordH
           e.stopPropagation();
         }}
         disabled={!hasHistory}
-        title={hasHistory ? "点击查看修改历史" : "暂无修改历史"}
+        title={hasHistory ? t("passwords.viewHistory") : t("passwords.noHistory")}
       >
         <span className="history-date">
-          更新于 {new Date(updatedAt).toLocaleDateString("zh-CN")}
+          {t("passwords.updatedOn")} {new Date(updatedAt).toLocaleDateString()}
         </span>
         {hasHistory && (
           <span className="history-toggle">
@@ -63,16 +65,16 @@ function PasswordHistory({ history, updatedAt, isExpanded, onToggle }: PasswordH
               <div className="history-dot" />
               <div className="history-content">
                 <span className="history-timestamp">
-                  {new Date(record.timestamp).toLocaleString("zh-CN")}
+                  {new Date(record.timestamp).toLocaleString()}
                 </span>
                 {record.password && (
-                  <div className="history-change">密码已更新</div>
+                  <div className="history-change">{t("passwords.passwordUpdated")}</div>
                 )}
                 {record.username && (
-                  <div className="history-change">用户名: {record.username}</div>
+                  <div className="history-change">{t("passwords.username")}: {record.username}</div>
                 )}
                 {record.notes && (
-                  <div className="history-change">备注: {record.notes}</div>
+                  <div className="history-change">{t("passwords.notes")}: {record.notes}</div>
                 )}
               </div>
               {index < history.length - 1 && <div className="history-line" />}

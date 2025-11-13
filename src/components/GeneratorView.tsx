@@ -1,8 +1,10 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import PasswordGenerator from "./PasswordGenerator";
 import "../styles/GeneratorView.css";
 
 function GeneratorView() {
+  const { t } = useTranslation();
   const [generatedPassword, setGeneratedPassword] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -22,8 +24,8 @@ function GeneratorView() {
   return (
     <div className="generator-view-container">
       <div className="generator-view-header">
-        <h1>🎲 密码生成器</h1>
-        <p>生成安全的随机密码</p>
+        <h1>🎲 {t("generator.title")}</h1>
+        <p>{t("about.features.generatorDesc")}</p>
       </div>
 
       <div className="generator-view-content">
@@ -33,15 +35,15 @@ function GeneratorView() {
 
         {generatedPassword && (
           <div className="result-card">
-            <h2>生成的密码</h2>
+            <h2>{t("generator.passwordGenerated")}</h2>
             <div className="password-result">
               <code className="result-password">{generatedPassword}</code>
               <button onClick={copyPassword} className="copy-result-btn">
-                {copied ? "✓ 已复制" : "📋 复制"}
+                {copied ? "✓ " + t("generator.passwordCopied") : "📋 " + t("generator.copy")}
               </button>
             </div>
             <p className="result-hint">
-              💡 你也可以在添加密码时使用密码生成器
+              💡 {t("generator.regenerate")}
             </p>
           </div>
         )}

@@ -17,6 +17,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
+import { useTranslation } from "react-i18next";
 import { PasswordGroup } from "../types";
 import ConfirmDialog from "./ConfirmDialog";
 import "../styles/GroupList.css";
@@ -42,6 +43,7 @@ function AllPasswordsItem({
   onClick: () => void;
   totalCount: number;
 }) {
+  const { t } = useTranslation();
   const { setNodeRef, isOver } = useDroppable({
     id: `group-all`,
     data: { groupId: null },
@@ -54,7 +56,7 @@ function AllPasswordsItem({
       onClick={onClick}
     >
       <span className="group-icon">📋</span>
-      <span className="group-name">全部密码</span>
+      <span className="group-name">{t("passwords.allPasswords")}</span>
       <span className="group-count">{totalCount}</span>
     </div>
   );
@@ -130,6 +132,7 @@ function GroupList({
   onUpdateGroupOrder,
   entryCountByGroup,
 }: GroupListProps) {
+  const { t } = useTranslation();
   const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
   
   const sensors = useSensors(
@@ -195,8 +198,8 @@ function GroupList({
   return (
     <div className="group-list" onClick={closeContextMenu}>
       <div className="group-list-header">
-        <h3>分组</h3>
-        <button onClick={onAddGroup} className="add-group-btn" title="新建分组">
+        <h3>{t("groups.title")}</h3>
+        <button onClick={onAddGroup} className="add-group-btn" title={t("groups.addGroup")}>
           +
         </button>
       </div>
@@ -253,7 +256,7 @@ function GroupList({
               closeContextMenu();
             }}
           >
-            ✏️ 编辑
+            ✏️ {t("forms.edit")}
           </button>
           <button
             onClick={() => {
@@ -266,7 +269,7 @@ function GroupList({
             }}
             className="danger"
           >
-            🗑️ 删除
+            🗑️ {t("forms.delete")}
           </button>
         </div>
       )}
@@ -274,21 +277,21 @@ function GroupList({
       {/* 删除确认对话框 */}
       {confirmDelete && confirmDelete.hasEntries ? (
         <ConfirmDialog
-          title="无法删除分组"
-          message={`分组"${confirmDelete.group.name}"下还有 ${entryCountByGroup[confirmDelete.group.id]} 个密码。请先删除或移动这些密码。`}
+          title={t("groups.cannotDeleteGroup")}
+          message={`${t("groups.groupHasPasswords", { groupName: confirmDelete.group.name, count: entryCountByGroup[confirmDelete.group.id] })}`}
           type="warning"
-          confirmText="知道了"
+          confirmText={t("common.understood")}
           cancelText=""
           onConfirm={() => setConfirmDelete(null)}
           onCancel={() => setConfirmDelete(null)}
         />
       ) : confirmDelete ? (
         <ConfirmDialog
-          title="删除分组"
-          message={`确定要删除分组"${confirmDelete.group.name}"吗？此操作无法撤销。`}
+          title={t("groups.deleteGroup")}
+          message={`${t("groups.confirmDeleteGroup", { groupName: confirmDelete.group.name })}`}
           type="danger"
-          confirmText="删除"
-          cancelText="取消"
+          confirmText={t("forms.delete")}
+          cancelText={t("forms.cancel")}
           onConfirm={() => {
             onDeleteGroup(confirmDelete.group.id);
             setConfirmDelete(null);

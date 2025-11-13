@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import { copyToClipboardWithTimeout } from "../utils/clipboard";
 import "../styles/TotpDisplay.css";
 
@@ -10,6 +11,7 @@ interface TotpDisplayProps {
 }
 
 function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
+  const { t } = useTranslation();
   const [code, setCode] = useState("------");
   const [timeLeft, setTimeLeft] = useState(30);
   const [copied, setCopied] = useState(false);
@@ -62,7 +64,7 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
       onCopy?.(code);
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('复制 TOTP 失败:', error);
+      console.error(t("totp.copyFailed") + ":", error);
     }
   };
 
@@ -73,7 +75,7 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
       setCopiedCombined(true);
       setTimeout(() => setCopiedCombined(false), 2000);
     } catch (error) {
-      console.error('复制组合密码失败:', error);
+      console.error(t("totp.copyCombinedFailed") + ":", error);
     }
   };
 
@@ -91,9 +93,9 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
       <div className="totp-display totp-error">
         <div className="error-icon">⚠️</div>
         <div className="error-message">
-          <strong>TOTP 配置错误</strong>
+          <strong>{t("totp.configError")}</strong>
           <p>{error}</p>
-          <small>请重新配置 TOTP 或检查密钥格式是否正确（需要 Base32 编码）</small>
+          <small>{t("totp.configErrorHint")}</small>
         </div>
       </div>
     );
@@ -102,7 +104,7 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
   return (
     <div className="totp-display">
       <div className="totp-section-header">
-        <span className="section-label">TOTP 验证码</span>
+        <span className="section-label">{t("totp.title")}</span>
       </div>
       
       <div className="totp-code-container">
@@ -110,7 +112,7 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
         <button
           onClick={handleCopy}
           className="totp-copy-btn"
-          title="仅复制验证码"
+          title={t("totp.copyCodeOnly")}
         >
           {copied ? "✓" : "📋"}
         </button>
@@ -128,7 +130,7 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
       </div>
 
       <div className="combined-password-preview">
-        <div className="combined-label">🔗 组合密码（密码+验证码）</div>
+        <div className="combined-label">🔗 {t("totp.combinedPassword")}</div>
         <div className="combined-password-row">
           <code className="combined-code">
             {showCombined ? combinedPassword : "••••••••••••••"}
@@ -137,14 +139,14 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
             <button
               onClick={() => setShowCombined(!showCombined)}
               className="combined-action-btn"
-              title={showCombined ? "隐藏" : "显示"}
+              title={showCombined ? t("passwords.hidePassword") : t("passwords.showPassword")}
             >
               {showCombined ? "🙈" : "👁️"}
             </button>
             <button
               onClick={handleCopyCombined}
               className="combined-action-btn"
-              title="复制组合密码"
+              title={t("totp.copyCombined")}
             >
               {copiedCombined ? "✓" : "📋"}
             </button>

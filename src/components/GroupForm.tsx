@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { PasswordGroup } from "../types";
 import "../styles/GroupForm.css";
 
@@ -11,6 +12,7 @@ interface GroupFormProps {
 const ICON_OPTIONS = ["📁", "💼", "🏦", "🎮", "🛒", "📧", "🔧", "🏠", "🎓", "💳", "🌐", "📱"];
 
 function GroupForm({ group, onSave, onCancel }: GroupFormProps) {
+  const { t } = useTranslation();
   const [name, setName] = useState(group?.name || "");
   const [icon, setIcon] = useState(group?.icon || "📁");
 
@@ -24,7 +26,7 @@ function GroupForm({ group, onSave, onCancel }: GroupFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert("请输入分组名称");
+      alert(t("groups.pleaseEnterGroupName"));
       return;
     }
 
@@ -39,7 +41,7 @@ function GroupForm({ group, onSave, onCancel }: GroupFormProps) {
     <div className="modal-overlay" onClick={onCancel}>
       <div className="group-form-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>{group ? "编辑分组" : "新建分组"}</h2>
+          <h2>{group ? t("groups.editGroup") : t("groups.addGroup")}</h2>
           <button onClick={onCancel} className="close-btn">
             ✕
           </button>
@@ -47,19 +49,19 @@ function GroupForm({ group, onSave, onCancel }: GroupFormProps) {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label>分组名称</label>
+            <label>{t("groups.groupName")}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="例如：工作、个人、银行"
+              placeholder={t("groups.groupNamePlaceholder")}
               autoFocus
               autoCorrect="off"
             />
           </div>
 
           <div className="form-group">
-            <label>图标</label>
+            <label>{t("groups.groupIcon")}</label>
             <div className="icon-selector">
               {ICON_OPTIONS.map((iconOption) => (
                 <button
@@ -76,10 +78,10 @@ function GroupForm({ group, onSave, onCancel }: GroupFormProps) {
 
           <div className="form-actions">
             <button type="button" onClick={onCancel} className="btn-secondary">
-              取消
+              {t("forms.cancel")}
             </button>
             <button type="submit" className="btn-primary">
-              {group ? "保存" : "创建"}
+              {group ? t("forms.save") : t("forms.add")}
             </button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import Login from "./components/Login";
 import GroupList from "./components/GroupList";
 import GroupForm from "./components/GroupForm";
@@ -15,6 +16,7 @@ import { useToast } from "./hooks/useToast";
 import "./App.css";
 
 function App() {
+  const { t } = useTranslation();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState("passwords");
   const [entries, setEntries] = useState<PasswordEntry[]>([]);
@@ -48,7 +50,7 @@ function App() {
       if (timeoutId) clearTimeout(timeoutId);
       
       timeoutId = setTimeout(() => {
-        console.log("自动锁定触发");
+        console.log(t("common.autoLockTriggered"));
         setIsAuthenticated(false);
         setEntries([]);
         setCurrentView("passwords");
@@ -180,10 +182,10 @@ function App() {
       await loadEntries();
       setShowForm(false);
       setEditingEntry(undefined);
-      toast.success(editingEntry ? "密码已更新" : "密码已添加");
+      toast.success(editingEntry ? t("passwords.passwordUpdated") : t("passwords.passwordAdded"));
     } catch (error) {
       console.error("Failed to save entry:", error);
-      toast.error("保存失败：" + error);
+      toast.error(t("passwords.saveFailed") + "：" + error);
     }
   };
 
@@ -191,10 +193,10 @@ function App() {
     try {
       await invoke("delete_entry", { id });
       await loadEntries();
-      toast.success("密码已删除");
+      toast.success(t("passwords.passwordDeleted"));
     } catch (error) {
       console.error("Failed to delete entry:", error);
-      toast.error("删除失败：" + error);
+      toast.error(t("passwords.deleteFailed") + "：" + error);
     }
   };
 
@@ -213,7 +215,7 @@ function App() {
       console.log("数据重新加载完成");
     } catch (error) {
       console.error("Failed to update order:", error);
-      toast.error("更新顺序失败：" + error);
+      toast.error(t("passwords.updateOrderFailed") + "：" + error);
     }
   };
 
@@ -262,10 +264,10 @@ function App() {
       await loadGroups();
       setShowGroupForm(false);
       setEditingGroup(undefined);
-      toast.success(editingGroup ? "分组已更新" : "分组已创建");
+      toast.success(editingGroup ? t("groups.groupUpdated") : t("groups.groupAdded"));
     } catch (error) {
       console.error("Failed to save group:", error);
-      toast.error("保存分组失败：" + error);
+      toast.error(t("groups.saveGroupFailed") + "：" + error);
     }
   };
 
@@ -276,10 +278,10 @@ function App() {
       if (selectedGroupId === groupId) {
         setSelectedGroupId(null);
       }
-      toast.success("分组已删除");
+      toast.success(t("groups.groupDeleted"));
     } catch (error) {
       console.error("Failed to delete group:", error);
-      toast.error("删除分组失败：" + error);
+      toast.error(t("groups.deleteGroupFailed") + "：" + error);
     }
   };
 
@@ -294,7 +296,7 @@ function App() {
       }
     } catch (error) {
       console.error("Failed to update group order:", error);
-      toast.error("更新分组顺序失败：" + error);
+      toast.error(t("groups.updateGroupOrderFailed") + "：" + error);
       // 失败时重新加载
       await loadGroups();
     }
@@ -353,12 +355,12 @@ function App() {
       await loadEntries();
       
       const groupName = targetGroupId 
-        ? groups.find(g => g.id === targetGroupId)?.name || "分组"
-        : "全部密码";
-      toast.success(`已移动到"${groupName}"`);
+        ? groups.find(g => g.id === targetGroupId)?.name || t("groups.title")
+        : t("passwords.allPasswords");
+      toast.success(t("passwords.movedToGroup", { groupName }));
     } catch (error) {
       console.error("Failed to move entry:", error);
-      toast.error("移动失败：" + error);
+      toast.error(t("passwords.moveFailed") + "：" + error);
     }
   };
 
@@ -445,30 +447,30 @@ function App() {
             className={`nav-btn ${currentView === "passwords" ? "active" : ""}`}
             onClick={() => handleViewChange("passwords")}
           >
-            🔐 密码
+            🔐 {t("nav.passwords")}
           </button>
           <button
             className={`nav-btn ${currentView === "generator" ? "active" : ""}`}
             onClick={() => handleViewChange("generator")}
           >
-            🎲 生成器
+            🎲 {t("nav.generator")}
           </button>
           <button
             className={`nav-btn ${currentView === "settings" ? "active" : ""}`}
             onClick={() => handleViewChange("settings")}
           >
-            ⚙️ 设置
+            ⚙️ {t("nav.settings")}
           </button>
           <button
             className={`nav-btn ${currentView === "about" ? "active" : ""}`}
             onClick={() => handleViewChange("about")}
           >
-            ℹ️ 关于
+            ℹ️ {t("nav.about")}
           </button>
         </nav>
         <div className="header-right">
-          <button onClick={handleLock} className="lock-btn" title="锁定应用">
-            🔒 锁定
+          <button onClick={handleLock} className="lock-btn" title={t("nav.lock")}>
+            🔒 {t("nav.lock")}
           </button>
         </div>
       </header>

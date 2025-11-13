@@ -1,78 +1,75 @@
 import { useState, useEffect } from "react";
 import { getVersion } from "@tauri-apps/api/app";
+import { useTranslation } from "react-i18next";
 import "../styles/About.css";
 
 function About() {
-  const [version, setVersion] = useState("加载中...");
+  const { t } = useTranslation();
+  const [version, setVersion] = useState(t("about.loading"));
 
   useEffect(() => {
-    getVersion().then(setVersion).catch(() => setVersion("未知"));
-  }, []);
+    getVersion().then(setVersion).catch(() => setVersion(t("about.unknown")));
+  }, [t]);
 
   return (
     <div className="about-container">
       <div className="about-header">
         <div className="about-logo">🔐</div>
-        <h1>2Pass 密码管理器</h1>
-        <p className="version">版本 {version}</p>
+        <h1>{t("about.title")}</h1>
+        <p className="version">{t("about.version")} {version}</p>
       </div>
 
       <div className="about-content">
-        {/* <Changelog /> */}
-        
-        
         <div className="feature-grid">
           <div className="feature-card">
             <div className="feature-icon">🔒</div>
-            <h3>AES-256-GCM 加密</h3>
-            <p>军事级加密算法保护你的数据</p>
+            <h3>{t("about.features.encryption")}</h3>
+            <p>{t("about.features.encryptionDesc")}</p>
           </div>
 
           <div className="feature-card">
             <div className="feature-icon">🔑</div>
-            <h3>Argon2 密钥派生</h3>
-            <p>抗暴力破解的密码哈希</p>
+            <h3>{t("about.features.keyDerivation")}</h3>
+            <p>{t("about.features.keyDerivationDesc")}</p>
           </div>
 
           <div className="feature-card">
             <div className="feature-icon">⏱️</div>
-            <h3>TOTP 支持</h3>
-            <p>兼容 Google Authenticator</p>
+            <h3>{t("about.features.totp")}</h3>
+            <p>{t("about.features.totpDesc")}</p>
           </div>
 
           <div className="feature-card">
             <div className="feature-icon">💾</div>
-            <h3>本地存储</h3>
-            <p>数据仅保存在本地，不会上传</p>
+            <h3>{t("about.features.localStorage")}</h3>
+            <p>{t("about.features.localStorageDesc")}</p>
           </div>
 
           <div className="feature-card">
             <div className="feature-icon">🎲</div>
-            <h3>密码生成器</h3>
-            <p>生成安全的随机密码</p>
+            <h3>{t("about.features.generator")}</h3>
+            <p>{t("about.features.generatorDesc")}</p>
           </div>
 
           <div className="feature-card">
             <div className="feature-icon">🔍</div>
-            <h3>智能搜索</h3>
-            <p>快速找到你需要的密码</p>
+            <h3>{t("about.features.search")}</h3>
+            <p>{t("about.features.searchDesc")}</p>
           </div>
         </div>
 
         <div className="security-info">
-          <h2>🔐 安全说明</h2>
+          <h2>🔐 {t("about.security.title")}</h2>
           <ul>
-            <li>所有密码使用 AES-256-GCM 加密存储</li>
-            <li>主密码使用 Argon2id 哈希</li>
-            <li>TOTP 密钥随密码一起加密</li>
-            <li>数据仅保存在本地，不会联网</li>
-            <li>开源透明，代码可审计</li>
+            {(t("about.security.items", { returnObjects: true }) as string[]).map((item: string, index: number) => (
+              <li key={index}>{item}</li>
+            ))}
           </ul>
         </div>
 
         <div className="footer-info">
-          <p>© 2025 2Pass. 使用 ❤️ 和 Rust 构建</p>
-          <p className="license">MIT License</p>
+          <p>{t("about.footer")}</p>
+          <p className="license">{t("about.license")}</p>
         </div>
       </div>
     </div>

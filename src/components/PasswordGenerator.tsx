@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/PasswordGenerator.css";
 
 interface PasswordGeneratorProps {
@@ -6,12 +7,14 @@ interface PasswordGeneratorProps {
 }
 
 function PasswordGenerator({  }: PasswordGeneratorProps) {
+  const { t } = useTranslation();
   const [length, setLength] = useState(16);
   const [includeUppercase, setIncludeUppercase] = useState(true);
   const [includeLowercase, setIncludeLowercase] = useState(true);
   const [includeNumbers, setIncludeNumbers] = useState(true);
   const [includeSymbols, setIncludeSymbols] = useState(true);
   const [generatedPassword, setGeneratedPassword] = useState("");
+  const [copied, setCopied] = useState(false);
 
   const generatePassword = () => {
     let charset = "";
@@ -34,15 +37,17 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
     }
 
     setGeneratedPassword(password);
+    setCopied(false);
   };
 
   const copyToClipboard = async () => {
     if (generatedPassword) {
       try {
         await navigator.clipboard.writeText(generatedPassword);
-        // 可以添加一个提示，但这里简化处理
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        console.error("复制失败:", err);
+        console.error(t("generator.copy") + " " + t("common.error") + ":", err);
       }
     }
   };
@@ -58,21 +63,21 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
     if (/[0-9]/.test(password)) strength++;
     if (/[^a-zA-Z0-9]/.test(password)) strength++;
 
-    if (strength <= 2) return { label: "弱", color: "#ff4444" };
-    if (strength <= 4) return { label: "中", color: "#ffaa00" };
-    return { label: "强", color: "#00aa00" };
+    if (strength <= 2) return { label: t("generator.strength.weak"), color: "#ff4444" };
+    if (strength <= 4) return { label: t("generator.strength.fair"), color: "#ffaa00" };
+    return { label: t("generator.strength.strong"), color: "#00aa00" };
   };
 
   const strength = getPasswordStrength(generatedPassword);
 
   return (
     <div className="password-generator">
-      <h3>🎲 密码生成器</h3>
+      <h3>🎲 {t("generator.title")}</h3>
 
       <div className="generator-options">
         <div className="option-group">
           <label>
-            长度: {length}
+            {t("generator.length")}: {length}
             <input
               type="range"
               min="8"
@@ -90,7 +95,7 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
               checked={includeUppercase}
               onChange={(e) => setIncludeUppercase(e.target.checked)}
             />
-            大写字母 (A-Z)
+            {t("generator.includeUppercase")} (A-Z)
           </label>
           <label>
             <input
@@ -98,7 +103,7 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
               checked={includeLowercase}
               onChange={(e) => setIncludeLowercase(e.target.checked)}
             />
-            小写字母 (a-z)
+            {t("generator.includeLowercase")} (a-z)
           </label>
           <label>
             <input
@@ -106,7 +111,7 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
               checked={includeNumbers}
               onChange={(e) => setIncludeNumbers(e.target.checked)}
             />
-            数字 (0-9)
+            {t("generator.includeNumbers")} (0-9)
           </label>
           <label>
             <input
@@ -114,7 +119,7 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
               checked={includeSymbols}
               onChange={(e) => setIncludeSymbols(e.target.checked)}
             />
-            符号 (!@#$...)
+            {t("generator.includeSymbols")} (!@#$...)
           </label>
         </div>
       </div>
@@ -125,30 +130,30 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
           onClick={generatePassword}
           className="generate-button"
         >
-          生成密码
+          {t("generator.generate")}
         </button>
-        {generatedPassword && (
-          <button
-            type="button"
-            onClick={copyToClipboard}
-            className="copy-button"
-            title="复制到剪贴板"
-          >
-            📋 复制
-          </button>
-        )}
       </div>
 
       {generatedPassword && (
         <div className="generated-result">
           <div className="password-display">
-            <code>{generatedPassword}</code>
+            <div className="password-row">
+              <code className="password-code">{generatedPassword}</code>
+              <button
+                type="button"
+                onClick={copyToClipboard}
+                className="copy-button"
+                title={t("generator.copy")}
+              >
+                {copied ? "✓ " + t("generator.passwordCopied") : "📋 " + t("generator.copy")}
+              </button>
+            </div>
             {strength.label && (
               <span
                 className="strength-indicator"
                 style={{ color: strength.color }}
               >
-                强度: {strength.label}
+                {t("generator.strength.label")}: {strength.label}
               </span>
             )}
           </div>
