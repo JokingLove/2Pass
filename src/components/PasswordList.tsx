@@ -1,18 +1,5 @@
 import { useState, useRef } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  rectSortingStrategy,
-} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PasswordListProps, PasswordEntry } from "../types";
 import TotpDisplay from "./TotpDisplay";
@@ -66,7 +53,10 @@ function SortablePasswordCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: entry.id });
+  } = useSortable({ 
+    id: entry.id,
+    data: { type: 'password' }
+  });
 
   const [longPressTimer, setLongPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
   // 添加初始鼠标位置状态，用于区分拖动和长按
@@ -369,14 +359,11 @@ function PasswordList({
   onEdit,
   onDelete,
   onAdd,
-  onUpdateOrder,
-  onMoveToGroup,
   searchTerm,
   onSearchChange,
 }: PasswordListProps) {
   const [showPassword, setShowPassword] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<PasswordEntry | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
@@ -385,14 +372,6 @@ function PasswordList({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [historyExpandedIds, setHistoryExpandedIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    })
-  );
 
   // 按排序顺序排序
   const sortedEntries = [...entries].sort((a, b) => {
@@ -546,48 +525,6 @@ function PasswordList({
     setBatchDeleteConfirm(false);
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over) {
-      return;
-    }
-
-    // 检查是否拖到分组上
-    if (over.id.toString().startsWith("group-")) {
-      const entryId = active.id.toString();
-      const targetGroupId = over.data.current?.groupId;
-      onMoveToGroup?.(entryId, targetGroupId);
-      return;
-    }
-
-    // 原有的排序逻辑
-    if (active.id === over.id) {
-      return;
-    }
-
-    const oldIndex = sortedEntries.findIndex((e) => e.id === active.id);
-    const newIndex = sortedEntries.findIndex((e) => e.id === over.id);
-
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const reordered = arrayMove(sortedEntries, oldIndex, newIndex);
-      const updatedEntries = reordered.map((entry, index) => ({
-        ...entry,
-        sort_order: index,
-        updated_at: Date.now(),
-      }));
-
-      setIsSavingOrder(true);
-      try {
-        await onUpdateOrder(updatedEntries);
-      } catch (error) {
-        console.error("❌ 保存失败:", error);
-      } finally {
-        setIsSavingOrder(false);
-      }
-    }
-  };
-
   return (
     <div className="password-list-container">
       <div className="list-header">
@@ -655,16 +592,13 @@ function PasswordList({
         )}
         {!searchTerm && entries.length > 1 && !isMultiSelectMode && (
           <div className="drag-hint">
-            💡 提示：按住卡片左上角的 ⋮⋮ 图标拖动调整顺序，或长按卡片进入批量选择模式
+            💡 提示：按住卡片左上角的 ⋮⋮ 图标拖动调整顺序或拖到左侧分组，长按卡片进入批量选择模式
           </div>
         )}
         {isMultiSelectMode && (
           <div className="drag-hint">
             💡 提示：按 ESC 键退出批量选择模式
           </div>
-        )}
-        {isSavingOrder && (
-          <div className="saving-indicator">⏳ 正在保存排序...</div>
         )}
       </div>
 
@@ -702,37 +636,29 @@ function PasswordList({
             ))}
           </div>
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <SortableContext items={filteredEntries.map((e) => e.id)} strategy={rectSortingStrategy}>
-              <div className="entries-grid">
-                {filteredEntries.map((entry) => (
-                  <SortablePasswordCard
-                    key={entry.id}
-                    entry={entry}
-                    showPassword={showPassword}
-                    copiedId={copiedId}
-                    isMultiSelectMode={isMultiSelectMode}
-                    isSelected={selectedIds.has(entry.id)}
-                    isExpanded={expandedIds.has(entry.id)}
-                    isHistoryExpanded={historyExpandedIds.has(entry.id)}
-                    searchTerm={searchTerm}
-                    onToggleSelect={toggleSelectEntry}
-                    onEdit={onEdit}
-                    onConfirmDelete={confirmDelete}
-                    onTogglePassword={togglePasswordVisibility}
-                    onCopyToClipboard={copyToClipboard}
-                    onLongPress={handleLongPress}
-                    onToggleExpand={toggleExpand}
-                    onToggleHistory={toggleHistory}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
+          <div className="entries-grid">
+            {filteredEntries.map((entry) => (
+              <SortablePasswordCard
+                key={entry.id}
+                entry={entry}
+                showPassword={showPassword}
+                copiedId={copiedId}
+                isMultiSelectMode={isMultiSelectMode}
+                isSelected={selectedIds.has(entry.id)}
+                isExpanded={expandedIds.has(entry.id)}
+                isHistoryExpanded={historyExpandedIds.has(entry.id)}
+                searchTerm={searchTerm}
+                onToggleSelect={toggleSelectEntry}
+                onEdit={onEdit}
+                onConfirmDelete={confirmDelete}
+                onTogglePassword={togglePasswordVisibility}
+                onCopyToClipboard={copyToClipboard}
+                onLongPress={handleLongPress}
+                onToggleExpand={toggleExpand}
+                onToggleHistory={toggleHistory}
+              />
+            ))}
+          </div>
         )}
       </div>
 

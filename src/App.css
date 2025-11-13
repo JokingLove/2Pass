@@ -22,6 +22,12 @@ body {
   min-height: 100vh;
   overflow: hidden;
   background: var(--bg-color);
+  position: relative;
+}
+
+/* 全局拖动元素样式 - 最高优先级 */
+body [style*="transform"][style*="translate"] {
+  z-index: 999999 !important;
 }
 
 #root {
@@ -182,6 +188,12 @@ button {
   display: flex;
   height: 100%;
   overflow: hidden;
+  position: relative;
+}
+
+/* 确保拖动元素不受父容器层叠上下文限制 */
+.three-column-layout > * {
+  position: relative;
 }
 
 /* DnD Kit 拖动样式 */
@@ -190,32 +202,24 @@ button {
 }
 
 /* 拖动覆盖层 - 确保拖动的元素在最上层 */
-[data-dnd-kit-overlay] {
-  position: fixed !important;
-  z-index: 99999 !important;
+body > div[style*="position: fixed"],
+body > div[style*="position:fixed"] {
+  z-index: 999999 !important;
   pointer-events: none !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
 }
 
-[data-dnd-kit-overlay] * {
-  pointer-events: none;
-}
-
-/* 拖动中的元素样式 */
+/* 拖动中的密码卡片 */
 .entry-card.dragging {
-  opacity: 0.4;
+  opacity: 0.7;
   cursor: grabbing;
+  z-index: 999999 !important;
+  position: relative;
 }
 
+/* 拖动中的分组 */
 .group-item.dragging {
-  opacity: 0.4;
+  opacity: 0.5;
   cursor: grabbing;
-}
-
-/* 确保所有 DnD 相关元素都在正确的层级 */
-body > div[style*="position: fixed"] {
-  z-index: 99999 !important;
+  z-index: 999999 !important;
+  position: relative;
 }

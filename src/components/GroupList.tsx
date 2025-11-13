@@ -1,20 +1,5 @@
 import { useState } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useDroppable } from "@dnd-kit/core";
 import { PasswordGroup } from "../types";
@@ -28,7 +13,6 @@ interface GroupListProps {
   onAddGroup: () => void;
   onEditGroup: (group: PasswordGroup) => void;
   onDeleteGroup: (groupId: string) => void;
-  onUpdateGroupOrder: (groups: PasswordGroup[]) => void;
   entryCountByGroup: Record<string, number>;
 }
 
@@ -127,18 +111,8 @@ function GroupList({
   onAddGroup,
   onEditGroup,
   onDeleteGroup,
-  onUpdateGroupOrder,
   entryCountByGroup,
 }: GroupListProps) {
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    })
-  );
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -160,38 +134,6 @@ function GroupList({
 
   const totalCount = Object.values(entryCountByGroup).reduce((a, b) => a + b, 0);
 
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveGroupId(event.active.id.toString());
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveGroupId(null);
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    // 只处理分组排序，不处理密码卡片拖到分组
-    if (active.data.current?.type !== 'group') {
-      return;
-    }
-
-    const oldIndex = groups.findIndex((g) => g.id === active.id);
-    const newIndex = groups.findIndex((g) => g.id === over.id);
-
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const reordered = arrayMove(groups, oldIndex, newIndex);
-      const updatedGroups = reordered.map((group, index) => ({
-        ...group,
-        sort_order: index,
-      }));
-      onUpdateGroupOrder(updatedGroups);
-    }
-  };
-
-  const activeGroup = activeGroupId ? groups.find((g) => g.id === activeGroupId) : null;
-
   return (
     <div className="group-list" onClick={closeContextMenu}>
       <div className="group-list-header">
@@ -210,34 +152,16 @@ function GroupList({
         />
 
         {/* 用户分组 - 可拖动排序 */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
-            {groups.map((group) => (
-              <SortableGroupItem
-                key={group.id}
-                group={group}
-                isActive={selectedGroupId === group.id}
-                entryCount={entryCountByGroup[group.id] || 0}
-                onSelect={() => onSelectGroup(group.id)}
-                onContextMenu={(e) => handleContextMenu(e, group)}
-              />
-            ))}
-          </SortableContext>
-          <DragOverlay dropAnimation={null}>
-            {activeGroupId && activeGroup ? (
-              <div className="group-item" style={{ cursor: 'grabbing', opacity: 0.9 }}>
-                <span className="group-icon">{activeGroup.icon}</span>
-                <span className="group-name">{activeGroup.name}</span>
-                <span className="group-count">{entryCountByGroup[activeGroup.id] || 0}</span>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+        {groups.map((group) => (
+          <SortableGroupItem
+            key={group.id}
+            group={group}
+            isActive={selectedGroupId === group.id}
+            entryCount={entryCountByGroup[group.id] || 0}
+            onSelect={() => onSelectGroup(group.id)}
+            onContextMenu={(e) => handleContextMenu(e, group)}
+          />
+        ))}
       </div>
 
       {/* 右键菜单 */}

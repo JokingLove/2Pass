@@ -6,6 +6,8 @@
   border-right: 1px solid var(--border-color);
   width: 260px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .group-list-header {
@@ -67,6 +69,8 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
   background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .group-item:hover {

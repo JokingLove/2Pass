@@ -1,5 +1,19 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import {
+  DndContext,
+  pointerWithin,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import Login from "./components/Login";
 import GroupList from "./components/GroupList";
 import GroupForm from "./components/GroupForm";
@@ -357,32 +371,147 @@ function App() {
     }
   };
 
+  // 配置拖拽传感器
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 拖动8px后才激活，避免误触
+      },
+    })
+  );
+
+  // 处理拖拽悬停事件
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    const { active, over } = event;
+    
+    if (!over) return;
+    
+    const activeData = active.data.current;
+    const overData = over.data.current;
+    
+    console.log("拖拽悬停:", { 
+      activeId: active.id, 
+      activeType: activeData?.type,
+      overId: over.id, 
+      overGroupId: overData?.groupId 
+    });
+  }, []);
+
+  // 处理拖拽结束事件
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over) {
+      console.log("拖拽结束: 没有 over 目标");
+      return;
+    }
+    
+    // 判断拖拽的是分组还是密码
+    const activeData = active.data.current;
+    const overData = over.data.current;
+    
+    console.log("拖拽结束:", { 
+      activeId: active.id, 
+      activeType: activeData?.type,
+      overId: over.id, 
+      overType: overData?.type,
+      overGroupId: overData?.groupId 
+    });
+    
+    // 如果是分组拖拽（分组排序）
+    if (activeData?.type === 'group' && active.id !== over.id) {
+      const oldIndex = groups.findIndex((g) => g.id === active.id);
+      const newIndex = groups.findIndex((g) => g.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedGroups = arrayMove(groups, oldIndex, newIndex);
+        // 更新 sort_order
+        const updatedGroups = reorderedGroups.map((group, index) => ({
+          ...group,
+          sort_order: index,
+        }));
+        handleUpdateGroupOrder(updatedGroups);
+      }
+    }
+    // 如果是密码拖拽到分组（移动到分组）
+    else if (activeData?.type === 'password' && overData?.groupId !== undefined) {
+      console.log("移动密码到分组:", active.id, "->", overData.groupId);
+      handleMoveToGroup(active.id as string, overData.groupId);
+    }
+    // 如果是密码拖拽到密码（密码排序）
+    else if (activeData?.type === 'password' && active.id !== over.id) {
+      const sortedEntries = [...filteredEntries].sort((a, b) => {
+        if (a.sort_order !== undefined && b.sort_order !== undefined) {
+          return a.sort_order - b.sort_order;
+        }
+        if (a.sort_order !== undefined) return -1;
+        if (b.sort_order !== undefined) return 1;
+        return a.created_at - b.created_at;
+      });
+      
+      const oldIndex = sortedEntries.findIndex((e) => e.id === active.id);
+      const newIndex = sortedEntries.findIndex((e) => e.id === over.id);
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reordered = arrayMove(sortedEntries, oldIndex, newIndex);
+        const updatedEntries = reordered.map((entry, index) => ({
+          ...entry,
+          sort_order: index,
+          updated_at: Date.now(),
+        }));
+        
+        try {
+          await handleUpdateOrder(updatedEntries);
+        } catch (error) {
+          console.error("❌ 保存排序失败:", error);
+        }
+      }
+    }
+  }, [groups, filteredEntries, handleUpdateGroupOrder, handleMoveToGroup, handleUpdateOrder]);
+
   const renderView = () => {
+    // 合并所有可拖拽项目的 ID（分组 + 密码）
+    const allDraggableIds = [
+      ...groups.map((g) => g.id),
+      ...filteredEntries.map((e) => e.id)
+    ];
+
     switch (currentView) {
       case "passwords":
         return (
-          <div className="three-column-layout">
-            <GroupList
-              groups={groups}
-              selectedGroupId={selectedGroupId}
-              onSelectGroup={setSelectedGroupId}
-              onAddGroup={handleAddGroup}
-              onEditGroup={handleEditGroup}
-              onDeleteGroup={handleDeleteGroup}
-              onUpdateGroupOrder={handleUpdateGroupOrder}
-              entryCountByGroup={entryCountByGroup}
-            />
-            <PasswordList
-              entries={filteredEntries}
-              onEdit={handleEditEntry}
-              onDelete={handleDeleteEntry}
-              onAdd={handleAddEntry}
-              onUpdateOrder={handleUpdateOrder}
-              onMoveToGroup={handleMoveToGroup}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-            />
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={allDraggableIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="three-column-layout">
+                <GroupList
+                  groups={groups}
+                  selectedGroupId={selectedGroupId}
+                  onSelectGroup={setSelectedGroupId}
+                  onAddGroup={handleAddGroup}
+                  onEditGroup={handleEditGroup}
+                  onDeleteGroup={handleDeleteGroup}
+                  entryCountByGroup={entryCountByGroup}
+                />
+                <PasswordList
+                  entries={filteredEntries}
+                  onEdit={handleEditEntry}
+                  onDelete={handleDeleteEntry}
+                  onAdd={handleAddEntry}
+                  onUpdateOrder={handleUpdateOrder}
+                  onMoveToGroup={handleMoveToGroup}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                />
+              </div>
+            </SortableContext>
+          </DndContext>
         );
       case "generator":
         return <GeneratorView />;
@@ -401,28 +530,39 @@ function App() {
         return <About />;
       default:
         return (
-          <div className="three-column-layout">
-            <GroupList
-              groups={groups}
-              selectedGroupId={selectedGroupId}
-              onSelectGroup={setSelectedGroupId}
-              onAddGroup={handleAddGroup}
-              onEditGroup={handleEditGroup}
-              onDeleteGroup={handleDeleteGroup}
-              onUpdateGroupOrder={handleUpdateGroupOrder}
-              entryCountByGroup={entryCountByGroup}
-            />
-            <PasswordList
-              entries={filteredEntries}
-              onEdit={handleEditEntry}
-              onDelete={handleDeleteEntry}
-              onAdd={handleAddEntry}
-              onUpdateOrder={handleUpdateOrder}
-              onMoveToGroup={handleMoveToGroup}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-            />
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={pointerWithin}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={allDraggableIds}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="three-column-layout">
+                <GroupList
+                  groups={groups}
+                  selectedGroupId={selectedGroupId}
+                  onSelectGroup={setSelectedGroupId}
+                  onAddGroup={handleAddGroup}
+                  onEditGroup={handleEditGroup}
+                  onDeleteGroup={handleDeleteGroup}
+                  entryCountByGroup={entryCountByGroup}
+                />
+                <PasswordList
+                  entries={filteredEntries}
+                  onEdit={handleEditEntry}
+                  onDelete={handleDeleteEntry}
+                  onAdd={handleAddEntry}
+                  onUpdateOrder={handleUpdateOrder}
+                  onMoveToGroup={handleMoveToGroup}
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                />
+              </div>
+            </SortableContext>
+          </DndContext>
         );
     }
   };
