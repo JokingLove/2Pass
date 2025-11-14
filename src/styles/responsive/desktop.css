@@ -1,0 +1,45 @@
+/* 桌面端专用样式 (>1024px) */
+@media (min-width: 1025px) {
+  /* 分组侧边栏标准宽度 */
+  .group-list-container {
+    width: 260px;
+    min-width: 260px;
+  }
+
+  /* 密码列表标准宽度 */
+  .password-list-container {
+    flex: 1;
+  }
+
+  /* 顶部导航栏标准样式 */
+  .app-header {
+    padding: 10px 20px;
+    height: 60px;
+  }
+
+  .nav-btn {
+    padding: 9px 18px;
+    font-size: 14px;
+  }
+
+  /* 密码卡片标准样式 */
+  .entry-card {
+    padding: 16px;
+  }
+
+  /* 表单弹窗标准样式 */
+  .modal-content {
+    width: 600px;
+    max-width: 90%;
+  }
+
+  /* 悬停效果增强 */
+  .entry-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .nav-btn:hover {
+    transform: translateY(-1px);
+  }
+}

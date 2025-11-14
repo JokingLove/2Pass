@@ -13,10 +13,13 @@ import ToastContainer from "./components/ToastContainer";
 import { PasswordEntry, PasswordGroup } from "./types";
 import { useKeyboard } from "./hooks/useKeyboard";
 import { useToast } from "./hooks/useToast";
+import { useResponsive } from "./hooks/useResponsive";
 import "./App.css";
+import "./styles/responsive/index.css";
 
 function App() {
   const { t } = useTranslation();
+  const { isMobile } = useResponsive(); // 响应式状态
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState("passwords");
   const [entries, setEntries] = useState<PasswordEntry[]>([]);
@@ -36,6 +39,10 @@ function App() {
     const savedTheme = localStorage.getItem("theme") || "default";
     setTheme(savedTheme);
     document.documentElement.setAttribute("data-theme", savedTheme);
+    
+    // 设置 HTML lang 属性
+    const savedLanguage = localStorage.getItem("language") || "zh-CN";
+    document.documentElement.setAttribute("lang", savedLanguage);
   }, []);
 
 
@@ -369,16 +376,20 @@ function App() {
       case "passwords":
         return (
           <div className="three-column-layout">
-            <GroupList
-              groups={groups}
-              selectedGroupId={selectedGroupId}
-              onSelectGroup={setSelectedGroupId}
-              onAddGroup={handleAddGroup}
-              onEditGroup={handleEditGroup}
-              onDeleteGroup={handleDeleteGroup}
-              onUpdateGroupOrder={handleUpdateGroupOrder}
-              entryCountByGroup={entryCountByGroup}
-            />
+            {/* 分组列表 - 桌面端显示，移动端隐藏 */}
+            {!isMobile && (
+              <GroupList
+                groups={groups}
+                selectedGroupId={selectedGroupId}
+                onSelectGroup={setSelectedGroupId}
+                onAddGroup={handleAddGroup}
+                onEditGroup={handleEditGroup}
+                onDeleteGroup={handleDeleteGroup}
+                onUpdateGroupOrder={handleUpdateGroupOrder}
+                entryCountByGroup={entryCountByGroup}
+              />
+            )}
+            {/* 密码列表 - 始终显示 */}
             <PasswordList
               entries={filteredEntries}
               onEdit={handleEditEntry}
@@ -409,16 +420,20 @@ function App() {
       default:
         return (
           <div className="three-column-layout">
-            <GroupList
-              groups={groups}
-              selectedGroupId={selectedGroupId}
-              onSelectGroup={setSelectedGroupId}
-              onAddGroup={handleAddGroup}
-              onEditGroup={handleEditGroup}
-              onDeleteGroup={handleDeleteGroup}
-              onUpdateGroupOrder={handleUpdateGroupOrder}
-              entryCountByGroup={entryCountByGroup}
-            />
+            {/* 分组列表 - 桌面端显示，移动端隐藏 */}
+            {!isMobile && (
+              <GroupList
+                groups={groups}
+                selectedGroupId={selectedGroupId}
+                onSelectGroup={setSelectedGroupId}
+                onAddGroup={handleAddGroup}
+                onEditGroup={handleEditGroup}
+                onDeleteGroup={handleDeleteGroup}
+                onUpdateGroupOrder={handleUpdateGroupOrder}
+                entryCountByGroup={entryCountByGroup}
+              />
+            )}
+            {/* 密码列表 - 始终显示 */}
             <PasswordList
               entries={filteredEntries}
               onEdit={handleEditEntry}
