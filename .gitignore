@@ -30,3 +30,5 @@ src-tauri/Cargo.lock
 # User data (just in case)
 *.json.enc
 data.json
+
+local-doc
