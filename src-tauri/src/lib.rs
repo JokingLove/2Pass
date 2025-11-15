@@ -13,6 +13,10 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
 
+mod sync;
+use sync::{SyncManager, SyncResult};
+use sync::traits::SyncConfig;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PasswordHistory {
     pub timestamp: i64,
@@ -53,6 +57,9 @@ struct StorageData {
     master_password_hash: String,
     encrypted_data: String,
     nonce: String,
+    sync_version: Option<i64>,        // 同步版本号
+    last_sync_time: Option<i64>,      // 最后同步时间
+    sync_config: Option<SyncConfig>, // 同步配置（加密存储）
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -66,6 +73,7 @@ struct AppState {
     entries: Vec<PasswordEntry>,
     groups: Vec<PasswordGroup>,
     encryption_key: Option<Vec<u8>>,
+    sync_manager: SyncManager,
 }
 
 impl AppState {
@@ -77,6 +85,7 @@ impl AppState {
             entries: Vec::new(),
             groups: Vec::new(),
             encryption_key: None,
+            sync_manager: SyncManager::new(),
         }
     }
 
@@ -179,6 +188,9 @@ fn create_master_password(
         master_password_hash: password_hash,
         encrypted_data,
         nonce,
+        sync_version: None,
+        last_sync_time: None,
+        sync_config: None,
     };
 
     let mut app_state = state.lock().unwrap();
@@ -394,10 +406,16 @@ fn change_master_password(
     let (encrypted_data, nonce) = encrypt_data(&entries_json, &new_key)?;
 
     // 保存新的数据
+    let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
+    let old_storage_data: StorageData = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+
     let new_storage_data = StorageData {
         master_password_hash: new_password_hash,
         encrypted_data,
         nonce,
+        sync_version: old_storage_data.sync_version,
+        last_sync_time: old_storage_data.last_sync_time,
+        sync_config: old_storage_data.sync_config,
     };
 
     fs::write(
@@ -677,6 +695,210 @@ fn import_encrypted_data(
     Ok(imported_count)
 }
 
+// ==================== 同步相关命令 ====================
+
+/// 列出所有可用的同步提供者
+#[tauri::command]
+fn list_sync_providers(state: tauri::State<Mutex<AppState>>) -> Result<Vec<String>, String> {
+    let app_state = state.lock().unwrap();
+    Ok(app_state.sync_manager.list_providers())
+}
+
+/// 获取同步配置
+#[tauri::command]
+fn get_sync_config(state: tauri::State<Mutex<AppState>>) -> Result<Option<SyncConfig>, String> {
+    let app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+
+    let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
+    let storage_data: StorageData = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+    
+    Ok(storage_data.sync_config)
+}
+
+/// 设置同步配置（配置数据需要前端加密后传入）
+#[tauri::command]
+fn set_sync_config(
+    config: SyncConfig,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<(), String> {
+    let app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+
+    let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
+    let mut storage_data: StorageData = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+    
+    storage_data.sync_config = Some(config);
+    
+    drop(app_state); // 释放锁
+    
+    let app_state = state.lock().unwrap();
+    fs::write(
+        &app_state.data_file,
+        serde_json::to_string(&storage_data).unwrap(),
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// 测试同步连接
+#[tauri::command]
+fn test_sync_connection(
+    provider: String,
+    config_json: String,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<(), String> {
+    let app_state = state.lock().unwrap();
+    app_state.sync_manager.test_connection(&provider, &config_json)
+}
+
+/// 上传数据到云端
+#[tauri::command]
+fn sync_upload(
+    provider: String,
+    config_json: String,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<SyncResult, String> {
+    let app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+
+    // 读取加密的数据文件内容
+    let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
+    let data_bytes = data.as_bytes();
+
+    // 上传
+    let result = app_state.sync_manager.upload(&provider, data_bytes, &config_json)?;
+
+    // 更新同步版本和时间
+    let mut storage_data: StorageData = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+    if let Some(version) = result.version {
+        storage_data.sync_version = Some(version);
+    }
+    if let Some(timestamp) = result.timestamp {
+        storage_data.last_sync_time = Some(timestamp);
+    }
+
+    drop(app_state); // 释放锁
+    
+    let app_state = state.lock().unwrap();
+    fs::write(
+        &app_state.data_file,
+        serde_json::to_string(&storage_data).unwrap(),
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(result)
+}
+
+/// 从云端下载数据
+#[tauri::command]
+fn sync_download(
+    provider: String,
+    config_json: String,
+    master_password: String,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<String, String> {
+    let mut app_state = state.lock().unwrap();
+    
+    // 下载数据
+    let downloaded_data = app_state.sync_manager.download(&provider, &config_json)?;
+    let downloaded_json = String::from_utf8(downloaded_data)
+        .map_err(|e| format!("Invalid UTF-8: {}", e))?;
+
+    // 验证密码
+    let storage_data: StorageData = serde_json::from_str(&downloaded_json)
+        .map_err(|e| format!("Invalid data format: {}", e))?;
+
+    let parsed_hash = PasswordHash::new(&storage_data.master_password_hash)
+        .map_err(|e| format!("Invalid password hash: {}", e))?;
+
+    let argon2 = Argon2::default();
+    if argon2
+        .verify_password(master_password.as_bytes(), &parsed_hash)
+        .is_err()
+    {
+        return Err("密码错误".to_string());
+    }
+
+    // 解密并更新本地数据
+    let key = derive_key(&master_password);
+    let decrypted = decrypt_data(&storage_data.encrypted_data, &storage_data.nonce, &key)?;
+    
+    let app_data: Result<AppData, _> = serde_json::from_str(&decrypted);
+    if let Ok(data) = app_data {
+        app_state.entries = data.entries;
+        app_state.groups = data.groups;
+    } else {
+        let entries: Vec<PasswordEntry> = serde_json::from_str(&decrypted).unwrap_or_default();
+        app_state.entries = entries;
+        app_state.groups = Vec::new();
+    }
+
+    app_state.encryption_key = Some(key);
+    
+    // 更新同步配置和版本
+    let mut local_storage_data = fs::read_to_string(&app_state.data_file)
+        .ok()
+        .and_then(|d| serde_json::from_str::<StorageData>(&d).ok());
+    
+    if let Some(ref mut local) = local_storage_data {
+        local.sync_version = storage_data.sync_version;
+        local.last_sync_time = storage_data.last_sync_time;
+        local.sync_config = storage_data.sync_config;
+    }
+
+    save_entries(&mut app_state)?;
+
+    Ok("下载成功".to_string())
+}
+
+/// 检查是否有更新
+#[tauri::command]
+fn check_sync_update(
+    provider: String,
+    config_json: String,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<bool, String> {
+    let app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+
+    let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
+    let storage_data: StorageData = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+    
+    let local_version = storage_data.sync_version.unwrap_or(0);
+    app_state.sync_manager.check_update(&provider, local_version, &config_json)
+}
+
+/// 获取同步状态信息
+#[tauri::command]
+fn get_sync_status(state: tauri::State<Mutex<AppState>>) -> Result<serde_json::Value, String> {
+    let app_state = state.lock().unwrap();
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+
+    let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
+    let storage_data: StorageData = serde_json::from_str(&data).map_err(|e| e.to_string())?;
+
+    let status = serde_json::json!({
+        "enabled": storage_data.sync_config.as_ref().map(|c| c.enabled).unwrap_or(false),
+        "provider": storage_data.sync_config.as_ref().map(|c| c.provider.clone()),
+        "version": storage_data.sync_version,
+        "last_sync_time": storage_data.last_sync_time,
+    });
+
+    Ok(status)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -709,6 +931,14 @@ pub fn run() {
             export_data,
             import_chrome_csv,
             import_encrypted_data,
+            list_sync_providers,
+            get_sync_config,
+            set_sync_config,
+            test_sync_connection,
+            sync_upload,
+            sync_download,
+            check_sync_update,
+            get_sync_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

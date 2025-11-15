@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
 import ImportDialog from "./ImportDialog";
+import SyncConfig from "./SyncConfig";
 import "../styles/Settings.css";
 
 interface SettingsProps {
@@ -17,11 +18,14 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
   const { t, i18n } = useTranslation();
   const [showChangeMasterPassword, setShowChangeMasterPassword] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showSyncConfig, setShowSyncConfig] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [syncStatus, setSyncStatus] = useState<any>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const autoLockOptions = [
     { value: 0, label: t("settings.autoLockOptions.disabled") },
@@ -46,6 +50,58 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
     { value: "zh-CN", label: t("settings.languages.zh-CN") },
     { value: "en-US", label: t("settings.languages.en-US") },
   ];
+
+  useEffect(() => {
+    loadSyncStatus();
+  }, []);
+
+  const loadSyncStatus = async () => {
+    try {
+      const status = await invoke<any>("get_sync_status");
+      setSyncStatus(status);
+    } catch (err) {
+      console.error("Failed to load sync status:", err);
+    }
+  };
+
+  const handleSync = async (direction: "upload" | "download") => {
+    if (!syncStatus?.enabled || !syncStatus?.provider) {
+      alert(t("settings.sync.pleaseConfigSync"));
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const config = await invoke<any>("get_sync_config");
+      if (!config) {
+        throw new Error(t("settings.sync.pleaseConfigSync"));
+      }
+
+      if (direction === "upload") {
+        await invoke("sync_upload", {
+          provider: syncStatus.provider,
+          configJson: config.config_data,
+        });
+        alert(t("settings.sync.uploadSuccess"));
+      } else {
+        const password = prompt(t("login.masterPassword") + ":");
+        if (!password) return;
+        
+        await invoke("sync_download", {
+          provider: syncStatus.provider,
+          configJson: config.config_data,
+          masterPassword: password,
+        });
+        alert(t("settings.sync.downloadSuccess"));
+        onRefresh();
+      }
+      await loadSyncStatus();
+    } catch (err: any) {
+      alert(t("settings.sync.syncFailed", { error: err }));
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleExportData = async () => {
     try {
@@ -244,6 +300,60 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
           </div>
         </div>
 
+        <div className="settings-section">
+          <h2>☁️ {t("settings.sync.title")}</h2>
+          <div className="setting-item">
+            <div className="setting-info">
+              <h3>{t("settings.sync.configSync")}</h3>
+              <p>
+                {syncStatus?.enabled
+                  ? t("settings.sync.syncEnabled", { 
+                      provider: syncStatus.provider || ""
+                    }) + (syncStatus.last_sync_time ? t("settings.sync.lastSync", { time: new Date(syncStatus.last_sync_time * 1000).toLocaleString() }) : "")
+                  : t("settings.sync.syncDescription")}
+              </p>
+            </div>
+            <button
+              className="setting-action-btn"
+              onClick={() => setShowSyncConfig(true)}
+            >
+              ⚙️ {t("settings.sync.configSync")}
+            </button>
+          </div>
+
+          {syncStatus?.enabled && (
+            <>
+              <div className="setting-item">
+                <div className="setting-info">
+                  <h3>{t("settings.sync.uploadToCloud")}</h3>
+                  <p>{t("settings.sync.uploadDescription")}</p>
+                </div>
+                <button
+                  className="setting-action-btn"
+                  onClick={() => handleSync("upload")}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? `⏳ ${t("settings.sync.uploading")}` : `📤 ${t("settings.sync.uploadNow")}`}
+                </button>
+              </div>
+
+              <div className="setting-item">
+                <div className="setting-info">
+                  <h3>{t("settings.sync.downloadFromCloud")}</h3>
+                  <p>{t("settings.sync.downloadDescription")}</p>
+                </div>
+                <button
+                  className="setting-action-btn"
+                  onClick={() => handleSync("download")}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? `⏳ ${t("settings.sync.downloading")}` : `📥 ${t("settings.sync.downloadNow")}`}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
         <div className="settings-section danger-section">
           <h2>⚠️ {t("settings.dangerZone")}</h2>
           <div className="setting-item">
@@ -333,6 +443,16 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
         <ImportDialog
           onClose={() => setShowImportDialog(false)}
           onSuccess={handleImportSuccess}
+        />
+      )}
+
+      {showSyncConfig && (
+        <SyncConfig
+          onClose={() => setShowSyncConfig(false)}
+          onSave={() => {
+            loadSyncStatus();
+            onRefresh();
+          }}
         />
       )}
     </div>
