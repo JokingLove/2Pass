@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
-import { copyToClipboardWithTimeout } from "../utils/clipboard";
+import { useCopy } from "../hooks/useCopy";
 import "../styles/TotpDisplay.css";
 
 interface TotpDisplayProps {
@@ -12,10 +12,9 @@ interface TotpDisplayProps {
 
 function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
   const { t } = useTranslation();
+  const { copyToClipboard, isCopied } = useCopy();
   const [code, setCode] = useState("------");
   const [timeLeft, setTimeLeft] = useState(30);
-  const [copied, setCopied] = useState(false);
-  const [copiedCombined, setCopiedCombined] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCombined, setShowCombined] = useState(false);
 
@@ -59,10 +58,8 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
 
   const handleCopy = async () => {
     try {
-      await copyToClipboardWithTimeout(code, 30000);
-      setCopied(true);
+      await copyToClipboard(code, "totp-code");
       onCopy?.(code);
-      setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       console.error(t("totp.copyFailed") + ":", error);
     }
@@ -71,9 +68,7 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
   const handleCopyCombined = async () => {
     try {
       const combinedPassword = password + code;
-      await copyToClipboardWithTimeout(combinedPassword, 30000);
-      setCopiedCombined(true);
-      setTimeout(() => setCopiedCombined(false), 2000);
+      await copyToClipboard(combinedPassword, "totp-combined");
     } catch (error) {
       console.error(t("totp.copyCombinedFailed") + ":", error);
     }
@@ -111,10 +106,10 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
         <span className="totp-code">{code}</span>
         <button
           onClick={handleCopy}
-          className="totp-copy-btn"
+          className={`totp-copy-btn ${isCopied("totp-code") ? "copied" : ""}`}
           title={t("totp.copyCodeOnly")}
         >
-          {copied ? "✓" : "📋"}
+          {isCopied("totp-code") ? "✓" : "📋"}
         </button>
       </div>
       
@@ -145,10 +140,10 @@ function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
             </button>
             <button
               onClick={handleCopyCombined}
-              className="combined-action-btn"
+              className={`combined-action-btn ${isCopied("totp-combined") ? "copied" : ""}`}
               title={t("totp.copyCombined")}
             >
-              {copiedCombined ? "✓" : "📋"}
+              {isCopied("totp-combined") ? "✓" : "📋"}
             </button>
           </div>
         </div>

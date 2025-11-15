@@ -1,34 +1,43 @@
-/* 主题系统 - CSS 变量 */
+/* 主题系统 - 颜色变量 */
+/* 与主题无关的设计令牌请查看 variables.css */
 
 /* 默认主题（2Pass 紫蓝渐变 - 与图标配色一致） */
 :root,
 :root[data-theme="default"] {
+  /* 主色调 */
   --primary-start: #667eea;
   --primary-end: #764ba2;
   --primary-color: #667eea;
   --primary-hover: #5668d8;
   --primary-light: rgba(102, 126, 234, 0.1);
   --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --primary-shadow: rgba(102, 126, 234, 0.3);
   
+  /* 背景色 */
   --bg-primary: #ffffff;
   --bg-secondary: #f5f3ff;
   --bg-tertiary: #ede9fe;
   --bg-color: #faf9ff;
   --card-bg: #ffffff;
   
+  /* 文字颜色 */
   --text-primary: #4c1d95;
   --text-secondary: #6d28d9;
   --text-tertiary: #8b5cf6;
   
+  /* 边框颜色 */
   --border-color: #c4b5fd;
   --border-light: #ddd6fe;
   --hover-bg: #f5f3ff;
   
+  /* 阴影 */
   --shadow-sm: 0 1px 3px rgba(102, 126, 234, 0.05);
   --shadow: 0 2px 8px rgba(102, 126, 234, 0.08);
   --shadow-md: 0 4px 12px rgba(102, 126, 234, 0.1);
   --shadow-lg: 0 8px 24px rgba(102, 126, 234, 0.12);
+  --shadow-hover: rgba(102, 126, 234, 0.15);
   
+  /* 状态颜色 */
   --success-color: #86efac;
   --warning-color: #fcd34d;
   --danger-color: #fca5a5;
@@ -219,11 +228,6 @@
   box-shadow: 4px 0 24px rgba(0, 0, 0, 0.03);
 }
 
-:root[data-theme="glass"] .password-list-container,
-:root[data-theme="glass"] .settings-container,
-:root[data-theme="glass"] .generator-view-container {
-  background: linear-gradient(135deg, #dce8f0 0%, #c8dae8 100%);
-}
 
 :root[data-theme="glass"] .entry-card,
 :root[data-theme="glass"] .settings-section,

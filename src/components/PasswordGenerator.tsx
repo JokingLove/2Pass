@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useCopy } from "../hooks/useCopy";
 import "../styles/PasswordGenerator.css";
 
 interface PasswordGeneratorProps {
@@ -8,13 +9,13 @@ interface PasswordGeneratorProps {
 
 function PasswordGenerator({  }: PasswordGeneratorProps) {
   const { t } = useTranslation();
+  const { copyToClipboard, isCopied } = useCopy();
   const [length, setLength] = useState(16);
   const [includeUppercase, setIncludeUppercase] = useState(true);
   const [includeLowercase, setIncludeLowercase] = useState(true);
   const [includeNumbers, setIncludeNumbers] = useState(true);
   const [includeSymbols, setIncludeSymbols] = useState(true);
   const [generatedPassword, setGeneratedPassword] = useState("");
-  const [copied, setCopied] = useState(false);
 
   const generatePassword = () => {
     let charset = "";
@@ -37,15 +38,12 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
     }
 
     setGeneratedPassword(password);
-    setCopied(false);
   };
 
-  const copyToClipboard = async () => {
+  const handleCopy = async () => {
     if (generatedPassword) {
       try {
-        await navigator.clipboard.writeText(generatedPassword);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        await copyToClipboard(generatedPassword, "generated-password");
       } catch (err) {
         console.error(t("generator.copy") + " " + t("common.error") + ":", err);
       }
@@ -141,11 +139,11 @@ function PasswordGenerator({  }: PasswordGeneratorProps) {
               <code className="password-code">{generatedPassword}</code>
               <button
                 type="button"
-                onClick={copyToClipboard}
-                className="copy-button"
+                onClick={handleCopy}
+                className={`copy-button ${isCopied("generated-password") ? "copied" : ""}`}
                 title={t("generator.copy")}
               >
-                {copied ? "✓ " + t("generator.passwordCopied") : "📋 " + t("generator.copy")}
+                {isCopied("generated-password") ? "✓ " + t("generator.passwordCopied") : "📋 " + t("generator.copy")}
               </button>
             </div>
             {strength.label && (

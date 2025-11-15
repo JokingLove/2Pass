@@ -19,8 +19,9 @@ import { PasswordListProps, PasswordEntry } from "../types";
 import TotpDisplay from "./TotpDisplay";
 import PasswordHistory from "./PasswordHistory";
 import ConfirmDialog from "./ConfirmDialog";
-import { copyToClipboardWithTimeout, highlightText } from "../utils/clipboard";
+import { highlightText } from "../utils/clipboard";
 import { useKeyboard } from "../hooks/useKeyboard";
+import { useCopy } from "../hooks/useCopy";
 import "../styles/PasswordList.css";
 
 interface SortableCardProps {
@@ -377,8 +378,8 @@ function PasswordList({
   onSearchChange,
 }: PasswordListProps) {
   const { t } = useTranslation();
+  const { copiedId, copyToClipboard } = useCopy();
   const [showPassword, setShowPassword] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<PasswordEntry | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -433,15 +434,7 @@ function PasswordList({
     return matchesSearch && matchesTag;
   });
 
-  const copyToClipboard = async (text: string, id: string) => {
-    try {
-      await copyToClipboardWithTimeout(text, 30000); // 30秒后自动清空
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (error) {
-      console.error(t("passwords.copyPassword") + " " + t("common.error") + ":", error);
-    }
-  };
+  // copyToClipboard 已通过 useCopy hook 提供
 
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedIds);
