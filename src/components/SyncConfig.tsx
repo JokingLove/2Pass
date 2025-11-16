@@ -324,23 +324,23 @@ function SyncConfig({ onClose, onSave }: SyncConfigProps) {
               </div>
             )}
           </div>
+        </div>
 
-          <div className="sync-actions">
-            <button
-              onClick={handleTestConnection}
-              className="test-btn"
-              disabled={isLoading}
-            >
-              {isLoading ? t("settings.sync.testing") : `🔍 ${t("settings.sync.testConnection")}`}
+        <div className="sync-actions">
+          <button
+            onClick={handleTestConnection}
+            className="test-btn"
+            disabled={isLoading}
+          >
+            {isLoading ? t("settings.sync.testing") : `🔍 ${t("settings.sync.testConnection")}`}
+          </button>
+          <div className="action-buttons">
+            <button onClick={onClose} className="cancel-btn">
+              {t("forms.cancel")}
             </button>
-            <div className="action-buttons">
-              <button onClick={onClose} className="cancel-btn">
-                {t("forms.cancel")}
-              </button>
-              <button onClick={handleSave} className="save-btn" disabled={isLoading}>
-                {isLoading ? t("settings.sync.saving") : `💾 ${t("settings.sync.saveConfig")}`}
-              </button>
-            </div>
+            <button onClick={handleSave} className="save-btn" disabled={isLoading}>
+              {isLoading ? t("settings.sync.saving") : `💾 ${t("settings.sync.saveConfig")}`}
+            </button>
           </div>
         </div>
       </div>
