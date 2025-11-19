@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import "../styles/TotpConfig.css";
 
 interface TotpConfigProps {
@@ -17,6 +18,7 @@ function TotpConfig({
   onRemove,
   onClose,
 }: TotpConfigProps) {
+  const { t } = useTranslation();
   const [secret, setSecret] = useState(currentSecret || "");
   const [manualSecret, setManualSecret] = useState("");
   const [qrUrl, setQrUrl] = useState("");
@@ -71,7 +73,7 @@ function TotpConfig({
       console.log("✓ Secret validated and set successfully");
     } catch (error) {
       console.error("Failed to generate secret:", error);
-      setTestError(`生成密钥失败: ${error}`);
+      setTestError(`${t("totp.generateSecretFailed")}: ${error}`);
     }
   };
 
@@ -99,7 +101,7 @@ function TotpConfig({
 
   const testTotpCode = async () => {
     if (!secret) {
-      setTestError("请先生成或输入 TOTP 密钥");
+      setTestError(t("totp.pleaseGenerateSecret"));
       return;
     }
     
@@ -122,7 +124,7 @@ function TotpConfig({
     } catch (error) {
       console.error("Failed to generate TOTP:", error);
       console.error("Secret that failed:", secret);
-      setTestError(`生成失败: ${error}`);
+      setTestError(`${t("totp.generateFailed")}: ${error}`);
       setTestCode("");
     } finally {
       setIsGeneratingTest(false);
@@ -143,7 +145,7 @@ function TotpConfig({
     <div className="totp-config-overlay">
       <div className="totp-config-container">
         <div className="totp-config-header">
-          <h2>⏱️ 配置 Google Authenticator</h2>
+          <h2>⏱️ {t("totp.configTitle")}</h2>
           <button onClick={onClose} className="close-btn">
             ✕
           </button>
@@ -152,15 +154,15 @@ function TotpConfig({
         <div className="totp-config-content">
           {!currentSecret && (
             <div className="config-section">
-              <h3>生成新的 TOTP 密钥</h3>
+              <h3>{t("totp.generateNewSecret")}</h3>
               <button onClick={generateNewSecret} className="generate-btn">
-                🔑 生成密钥
+                🔑 {t("totp.generateSecret")}
               </button>
               <button
                 onClick={() => setShowManualInput(!showManualInput)}
                 className="manual-btn"
               >
-                ✍️ 手动输入密钥
+                ✍️ {t("totp.manualInput")}
               </button>
 
               {showManualInput && (
@@ -169,11 +171,11 @@ function TotpConfig({
                     type="text"
                     value={manualSecret}
                     onChange={(e) => setManualSecret(e.target.value)}
-                    placeholder="输入 Base32 密钥"
+                    placeholder={t("totp.enterBase32Key")}
                     className="manual-input"
                   />
                   <button onClick={handleManualSecret} className="apply-btn">
-                    应用
+                    {t("totp.apply")}
                   </button>
                 </div>
               )}
@@ -183,22 +185,22 @@ function TotpConfig({
           {secret && (
             <>
               <div className="config-section">
-                <h3>密钥信息</h3>
+                <h3>{t("totp.secretInfo")}</h3>
                 <div className="secret-display">
                   <code>{formatSecret(secret)}</code>
                   <button
                     onClick={() => navigator.clipboard.writeText(secret)}
                     className="copy-secret-btn"
                   >
-                    📋 复制
+                    📋 {t("generator.copy")}
                   </button>
                 </div>
               </div>
 
               <div className="config-section">
-                <h3>扫描二维码</h3>
+                <h3>{t("totp.scanQRCode")}</h3>
                 <p className="info-text">
-                  使用 Google Authenticator 或其他 TOTP 应用扫描此二维码
+                  {t("totp.scanQRCodeHint")}
                 </p>
                 {qrUrl && (
                   <div className="qr-section">
@@ -210,25 +212,25 @@ function TotpConfig({
                       className="qr-code"
                     />
                     <p className="qr-url-text">
-                      或手动输入账户: {accountName}
+                      {t("totp.orManualAccount")}: {accountName}
                     </p>
                   </div>
                 )}
               </div>
 
               <div className="config-section">
-                <h3>测试验证码</h3>
+                <h3>{t("totp.testCode")}</h3>
                 <button 
                   onClick={testTotpCode} 
                   className="test-btn"
                   disabled={isGeneratingTest || !secret}
                 >
-                  {isGeneratingTest ? "⏳ 生成中..." : "🧪 生成测试验证码"}
+                  {isGeneratingTest ? "⏳ " + t("totp.generating") : "🧪 " + t("totp.generateTestCode")}
                 </button>
                 {testCode && (
                   <div className="test-code-display">
                     <span className="test-code">{testCode}</span>
-                    <small>此验证码在 30 秒内有效</small>
+                    <small>{t("totp.codeValidFor30s")}</small>
                   </div>
                 )}
                 {testError && (
@@ -239,7 +241,7 @@ function TotpConfig({
                 )}
                 {!secret && (
                   <div className="test-hint">
-                    💡 请先生成密钥或手动输入密钥后再测试
+                    💡 {t("totp.testHint")}
                   </div>
                 )}
               </div>
@@ -250,16 +252,16 @@ function TotpConfig({
         <div className="totp-config-actions">
           {currentSecret && (
             <button onClick={onRemove} className="remove-btn">
-              🗑️ 移除 TOTP
+              🗑️ {t("totp.removeTotp")}
             </button>
           )}
           {secret && (
             <button onClick={handleSave} className="save-btn">
-              💾 保存配置
+              💾 {t("totp.saveConfig")}
             </button>
           )}
           <button onClick={onClose} className="cancel-btn">
-            取消
+            {t("forms.cancel")}
           </button>
         </div>
       </div>

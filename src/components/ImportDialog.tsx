@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import "../styles/ImportDialog.css";
 
 interface ImportDialogProps {
@@ -8,6 +9,7 @@ interface ImportDialogProps {
 }
 
 function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
+  const { t } = useTranslation();
   const [importType, setImportType] = useState<"encrypted" | "chrome">("encrypted");
   const [password, setPassword] = useState("");
   const [fileContent, setFileContent] = useState("");
@@ -33,12 +35,12 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
     setSuccess("");
 
     if (!fileContent) {
-      setError("请先选择文件");
+      setError(t("import.pleaseSelectFile"));
       return;
     }
 
     if (importType === "encrypted" && !password) {
-      setError("请输入导入文件的密码");
+      setError(t("import.pleaseEnterPassword"));
       return;
     }
 
@@ -46,13 +48,13 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
     setImportProgress(0);
 
     try {
-      // 模拟进度更新
+      // 模拟进度更新（更平滑）
       const progressInterval = setInterval(() => {
         setImportProgress((prev) => {
-          if (prev >= 90) return prev;
-          return prev + 10;
+          if (prev >= 85) return prev;
+          return prev + 5;
         });
-      }, 100);
+      }, 150);
 
       let count: number;
       
@@ -70,7 +72,7 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
       clearInterval(progressInterval);
       setImportProgress(100);
 
-      setSuccess(`成功导入 ${count} 条密码！`);
+      setSuccess(t("import.successMessage", { count }));
       setTimeout(() => {
         onSuccess();
         onClose();
@@ -87,7 +89,7 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
     <div className="import-overlay" style={{ pointerEvents: isImporting ? 'none' : 'auto' }}>
       <div className="import-dialog" style={{ pointerEvents: 'auto' }}>
         <div className="import-header">
-          <h2>📥 导入数据</h2>
+          <h2>📥 {t("import.title")}</h2>
           <button onClick={onClose} className="close-btn" disabled={isImporting}>✕</button>
         </div>
 
@@ -98,22 +100,22 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
               onClick={() => setImportType("encrypted")}
               disabled={isImporting}
             >
-              🔒 导入加密备份
+              🔒 {t("import.importEncrypted")}
             </button>
             <button
               className={`type-btn ${importType === "chrome" ? "active" : ""}`}
               onClick={() => setImportType("chrome")}
               disabled={isImporting}
             >
-              🌐 导入 Chrome 密码
+              🌐 {t("import.importChrome")}
             </button>
           </div>
 
           {importType === "encrypted" ? (
             <div className="import-section">
-              <h3>导入加密备份文件</h3>
+              <h3>{t("import.encryptedBackupTitle")}</h3>
               <p className="import-hint">
-                导入之前通过"导出数据"功能导出的加密备份文件（.json）
+                {t("import.encryptedBackupHint")}
               </p>
               
               <div className="file-input-group">
@@ -125,41 +127,41 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
                   disabled={isImporting}
                 />
                 <label htmlFor="encrypted-file" className="file-label" style={{ opacity: isImporting ? 0.5 : 1, cursor: isImporting ? 'not-allowed' : 'pointer' }}>
-                  📁 选择备份文件
+                  📁 {t("import.selectBackupFile")}
                 </label>
               </div>
 
               {fileContent && (
                 <div className="file-selected">
-                  ✓ 文件已选择（{(fileContent.length / 1024).toFixed(2)} KB）
+                  ✓ {t("import.fileSelected")} ({(fileContent.length / 1024).toFixed(2)} KB)
                 </div>
               )}
 
               <div className="form-group">
-                <label>备份文件密码</label>
+                <label>{t("import.backupPassword")}</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="输入创建备份时的主密码"
+                  placeholder={t("import.backupPasswordPlaceholder")}
                   disabled={isImporting}
                 />
               </div>
             </div>
           ) : (
             <div className="import-section">
-              <h3>导入 Chrome 浏览器密码</h3>
+              <h3>{t("import.chromeTitle")}</h3>
               <p className="import-hint">
-                从 Chrome 设置 → 密码 → 导出密码，保存为 CSV 文件
+                {t("import.chromeHint")}
               </p>
               
               <div className="chrome-steps">
                 <ol>
-                  <li>打开 Chrome 浏览器</li>
-                  <li>进入 设置 → 密码管理器</li>
-                  <li>点击"导出密码"</li>
-                  <li>保存 CSV 文件</li>
-                  <li>在下方选择该文件</li>
+                  <li>{t("import.chromeStep1")}</li>
+                  <li>{t("import.chromeStep2")}</li>
+                  <li>{t("import.chromeStep3")}</li>
+                  <li>{t("import.chromeStep4")}</li>
+                  <li>{t("import.chromeStep5")}</li>
                 </ol>
               </div>
 
@@ -172,13 +174,13 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
                   disabled={isImporting}
                 />
                 <label htmlFor="chrome-file" className="file-label" style={{ opacity: isImporting ? 0.5 : 1, cursor: isImporting ? 'not-allowed' : 'pointer' }}>
-                  📁 选择 CSV 文件
+                  📁 {t("import.selectCsvFile")}
                 </label>
               </div>
 
               {fileContent && (
                 <div className="file-selected">
-                  ✓ 文件已选择（{(fileContent.length / 1024).toFixed(2)} KB）
+                  ✓ {t("import.fileSelected")} ({(fileContent.length / 1024).toFixed(2)} KB)
                 </div>
               )}
             </div>
@@ -192,7 +194,7 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
                   style={{ width: `${importProgress}%` }}
                 />
               </div>
-              <div className="progress-text">导入中... {importProgress}%</div>
+              <div className="progress-text">{t("import.importing")} {importProgress}%</div>
             </div>
           )}
 
@@ -202,14 +204,15 @@ function ImportDialog({ onClose, onSuccess }: ImportDialogProps) {
 
         <div className="import-actions">
           <button onClick={onClose} className="cancel-btn" disabled={isImporting}>
-            取消
+            {t("forms.cancel")}
           </button>
           <button
             onClick={handleImport}
-            className="import-btn"
+            className={`import-btn ${isImporting ? 'loading' : ''}`}
             disabled={isImporting || !fileContent}
           >
-            {isImporting ? "导入中..." : "开始导入"}
+            {isImporting && <span className="button-spinner"></span>}
+            <span>{isImporting ? t("import.importing") : t("import.startImport")}</span>
           </button>
         </div>
       </div>

@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { PasswordFormProps } from "../types";
 import PasswordGenerator from "./PasswordGenerator";
 import TotpConfig from "./TotpConfig";
-import { calculateStrength, getStrengthColor, getStrengthLabel } from "../utils/passwordStrength";
+import { calculateStrength, getStrengthColor } from "../utils/passwordStrength";
 import "../styles/PasswordForm.css";
 
 function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: PasswordFormProps) {
+  const { t } = useTranslation();
   const [title, setTitle] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -20,7 +22,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
   const [showTotpConfig, setShowTotpConfig] = useState(false);
 
   // 预定义的常用标签
-  const commonTags = ["工作", "个人", "银行", "社交", "邮箱", "购物", "娱乐", "开发"];
+  const commonTags = [t("passwords.commonTags.work"), t("passwords.commonTags.personal"), t("passwords.commonTags.banking"), t("passwords.commonTags.social"), t("passwords.commonTags.email"), t("passwords.commonTags.shopping"), t("passwords.commonTags.entertainment"), t("passwords.commonTags.development")];
 
   useEffect(() => {
     if (entry) {
@@ -96,12 +98,36 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
 
   // 计算密码强度
   const passwordStrength = password ? calculateStrength(password) : null;
+  
+  // 翻译密码强度标签
+  const getLocalizedStrengthLabel = (level: 'weak' | 'medium' | 'strong'): string => {
+    switch (level) {
+      case 'weak': return t("generator.strength.weak");
+      case 'medium': return t("generator.strength.fair");
+      case 'strong': return t("generator.strength.strong");
+    }
+  };
+  
+  // 翻译密码强度建议
+  const getLocalizedSuggestions = (suggestions: string[]): string[] => {
+    return suggestions.map(suggestion => {
+      switch (suggestion) {
+        case '至少需要 8 个字符': return t("passwords.strength.need8Chars");
+        case '建议使用 12 个字符以上': return t("passwords.strength.recommend12Chars");
+        case '添加小写字母': return t("passwords.strength.addLowercase");
+        case '添加大写字母': return t("passwords.strength.addUppercase");
+        case '添加数字': return t("passwords.strength.addNumbers");
+        case '添加特殊符号': return t("passwords.strength.addSymbols");
+        default: return suggestion;
+      }
+    });
+  };
 
   return (
     <div className="form-overlay">
       <div className="form-container">
         <div className="form-header">
-          <h2>{entry ? "✏️ 编辑密码" : "➕ 添加密码"}</h2>
+          <h2>{entry ? "✏️ " + t("passwords.editPassword") : "➕ " + t("passwords.addPassword")}</h2>
           <button onClick={onCancel} className="close-btn">
             ✕
           </button>
@@ -109,13 +135,13 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
 
         <form onSubmit={handleSubmit} className="password-form">
           <div className="form-group">
-            <label htmlFor="title">标题 *</label>
+            <label htmlFor="title">{t("passwords.entryTitle")} *</label>
             <input
               id="title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="例如：Gmail、银行账户"
+              placeholder={t("passwords.titlePlaceholder")}
               required
               autoFocus
               autoCorrect="off"
@@ -124,14 +150,14 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
 
           {groups.length > 0 && (
             <div className="form-group">
-              <label htmlFor="group">📁 分组</label>
+              <label htmlFor="group">📁 {t("passwords.group")}</label>
               <select
                 id="group"
                 value={groupId || ""}
                 onChange={(e) => setGroupId(e.target.value || undefined)}
                 className="group-select"
               >
-                <option value="">无分组</option>
+                <option value="">{t("groups.noGroup")}</option>
                 {groups.map((group) => (
                   <option key={group.id} value={group.id}>
                     {group.icon} {group.name}
@@ -142,12 +168,12 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
           )}
 
           <div className="form-group">
-            <label htmlFor="url">🌐 网址</label>
+            <label htmlFor="url">🌐 {t("passwords.website")}</label>
             <div className="url-list">
               {url.length === 0 ? (
                 <div className="url-empty-state">
                   <span className="empty-icon">🔗</span>
-                  <span className="empty-text">暂无网址</span>
+                  <span className="empty-text">{t("passwords.noWebsites")}</span>
                 </div>
               ) : (
                 url.map((singleUrl, index) => (
@@ -161,7 +187,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
                         updatedUrls[index] = e.target.value;
                         setUrl(updatedUrls);
                       }}
-                      placeholder="https://example.com"
+                      placeholder={t("passwords.websitePlaceholder")}
                       className="url-input"
                     />
                     <button
@@ -170,7 +196,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
                         setUrl(url.filter((_, i) => i !== index));
                       }}
                       className="url-remove-btn"
-                      title="删除"
+                      title={t("forms.delete")}
                     >
                       ✕
                     </button>
@@ -183,40 +209,40 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
                 className="url-add-btn"
               >
                 <span className="btn-icon">➕</span>
-                <span className="btn-text">添加网址</span>
+                <span className="btn-text">{t("passwords.addWebsite")}</span>
               </button>
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="username">用户名 *</label>
+            <label htmlFor="username">{t("passwords.username")} *</label>
             <input
               id="username"
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="用户名或邮箱"
+              placeholder={t("passwords.usernamePlaceholder")}
               required
               autoCorrect="off"
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">密码 *</label>
+            <label htmlFor="password">{t("passwords.password")} *</label>
             <div className="password-input-group">
               <input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="输入密码"
+                placeholder={t("passwords.passwordPlaceholder")}
                 required
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="input-btn"
-                title="显示/隐藏"
+                title={showPassword ? t("passwords.hidePassword") : t("passwords.showPassword")}
               >
                 {showPassword ? "🙈" : "👁️"}
               </button>
@@ -224,7 +250,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
                 type="button"
                 onClick={() => setShowGenerator(!showGenerator)}
                 className="input-btn generate-btn"
-                title="生成密码"
+                title={t("generator.generate")}
               >
                 🎲
               </button>
@@ -242,11 +268,11 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
                 </div>
                 <div className="strength-info">
                   <span className={`strength-label ${passwordStrength.level}`}>
-                    强度: {getStrengthLabel(passwordStrength.level)}
+                    {t("generator.strength.label")}: {getLocalizedStrengthLabel(passwordStrength.level)}
                   </span>
                   {passwordStrength.suggestions.length > 0 && (
                     <span className="strength-suggestions">
-                      💡 {passwordStrength.suggestions.join('，')}
+                      💡 {getLocalizedSuggestions(passwordStrength.suggestions).join(', ')}
                     </span>
                   )}
                 </div>
@@ -261,18 +287,18 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
           )}
 
           <div className="form-group">
-            <label htmlFor="notes">备注</label>
+            <label htmlFor="notes">{t("passwords.notes")}</label>
             <textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="添加备注信息..."
+              placeholder={t("passwords.notesPlaceholder")}
               rows={4}
             />
           </div>
 
           <div className="form-group">
-            <label>🏷️ 标签</label>
+            <label>🏷️ {t("passwords.tags")}</label>
             <div className="tags-container">
               {tags.map((tag) => (
                 <span key={tag} className="tag-chip">
@@ -293,7 +319,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={handleTagInputKeyPress}
-                placeholder="输入标签，按回车添加"
+                placeholder={t("passwords.tagPlaceholder")}
                 className="tag-input"
               />
               <button
@@ -302,7 +328,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
                 className="tag-add-btn"
                 disabled={!tagInput.trim()}
               >
-                添加
+                {t("forms.add")}
               </button>
             </div>
             <div className="common-tags">
@@ -320,17 +346,17 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
           </div>
 
           <div className="form-group">
-            <label>⏱️ Google Authenticator (TOTP)</label>
+            <label>⏱️ {t("totp.googleAuthenticator")}</label>
             <div className="totp-section">
               {totpSecret ? (
                 <div className="totp-configured">
-                  <span className="totp-status">✓ 已配置 TOTP</span>
+                  <span className="totp-status">✓ {t("totp.configured")}</span>
                   <button
                     type="button"
                     onClick={() => setShowTotpConfig(true)}
                     className="totp-manage-btn"
                   >
-                    🔧 管理
+                    🔧 {t("totp.manage")}
                   </button>
                 </div>
               ) : (
@@ -339,7 +365,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
                   onClick={() => setShowTotpConfig(true)}
                   className="totp-add-btn"
                 >
-                  ➕ 添加 TOTP
+                  ➕ {t("totp.addTotp")}
                 </button>
               )}
             </div>
@@ -347,10 +373,10 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
 
           <div className="form-actions">
             <button type="button" onClick={onCancel} className="cancel-btn">
-              取消
+              {t("forms.cancel")}
             </button>
             <button type="submit" className="save-btn">
-              💾 保存
+              💾 {t("forms.save")}
             </button>
           </div>
         </form>
@@ -358,7 +384,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
         {showTotpConfig && (
           <TotpConfig
             currentSecret={totpSecret}
-            accountName={title || "账户"}
+            accountName={title || t("passwords.account")}
             onSave={handleSaveTotpSecret}
             onRemove={handleRemoveTotp}
             onClose={() => setShowTotpConfig(false)}

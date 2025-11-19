@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import ImportDialog from "./ImportDialog";
 import "../styles/Settings.css";
 
@@ -13,6 +14,7 @@ interface SettingsProps {
 }
 
 function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeChange, onRefresh }: SettingsProps) {
+  const { t, i18n } = useTranslation();
   const [showChangeMasterPassword, setShowChangeMasterPassword] = useState(false);
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
@@ -22,22 +24,27 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
   const [success, setSuccess] = useState("");
 
   const autoLockOptions = [
-    { value: 0, label: "禁用" },
-    { value: 1, label: "1 分钟" },
-    { value: 5, label: "5 分钟" },
-    { value: 10, label: "10 分钟" },
-    { value: 15, label: "15 分钟" },
-    { value: 30, label: "30 分钟" },
-    { value: 60, label: "1 小时" },
+    { value: 0, label: t("settings.autoLockOptions.disabled") },
+    { value: 1, label: t("settings.autoLockOptions.1min") },
+    { value: 5, label: t("settings.autoLockOptions.5min") },
+    { value: 10, label: t("settings.autoLockOptions.10min") },
+    { value: 15, label: t("settings.autoLockOptions.15min") },
+    { value: 30, label: t("settings.autoLockOptions.30min") },
+    { value: 60, label: t("settings.autoLockOptions.1hour") },
   ];
 
   const themeOptions = [
-    { value: "default", label: "2Pass 紫蓝", preview: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
-    { value: "sky-blue", label: "晴空万里", preview: "linear-gradient(135deg, #93c5fd 0%, #7dd3fc 100%)" },
-    { value: "purple-pink", label: "星空幻境", preview: "linear-gradient(135deg, #c4b5fd 0%, #f9a8d4 100%)" },
-    { value: "turquoise", label: "翡翠森林", preview: "linear-gradient(135deg, #5eead4 0%, #6ee7b7 100%)" },
-    { value: "bulma", label: "清新薄荷", preview: "linear-gradient(135deg, #5eead4 0%, #34d399 100%)" },
-    { value: "glass", label: "毛玻璃", preview: "linear-gradient(135deg, #a5b4fc 0%, #93c5fd 100%)" },
+    { value: "default", label: t("settings.themes.default"), preview: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
+    { value: "sky-blue", label: t("settings.themes.skyBlue"), preview: "linear-gradient(135deg, #93c5fd 0%, #7dd3fc 100%)" },
+    { value: "purple-pink", label: t("settings.themes.purplePink"), preview: "linear-gradient(135deg, #c4b5fd 0%, #f9a8d4 100%)" },
+    { value: "turquoise", label: t("settings.themes.turquoise"), preview: "linear-gradient(135deg, #5eead4 0%, #6ee7b7 100%)" },
+    { value: "bulma", label: t("settings.themes.bulma"), preview: "linear-gradient(135deg, #5eead4 0%, #34d399 100%)" },
+    { value: "glass", label: t("settings.themes.glass"), preview: "linear-gradient(135deg, #a5b4fc 0%, #93c5fd 100%)" },
+  ];
+
+  const languageOptions = [
+    { value: "zh-CN", label: t("settings.languages.zh-CN") },
+    { value: "en-US", label: t("settings.languages.en-US") },
   ];
 
   const handleExportData = async () => {
@@ -45,13 +52,13 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
       // 导入 Tauri 的文件对话框和文件系统 API
       const { save } = await import("@tauri-apps/plugin-dialog");
       const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-      
+
       // 获取导出数据
       const data = await invoke<string>("export_data");
-      
+
       // 生成默认文件名
       const defaultFileName = `2pass-backup-${new Date().toISOString().split("T")[0]}.json`;
-      
+
       // 打开保存对话框
       const filePath = await save({
         defaultPath: defaultFileName,
@@ -60,19 +67,19 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
           extensions: ["json"]
         }]
       });
-      
+
       // 如果用户取消了，filePath 为 null
       if (!filePath) {
         return;
       }
-      
+
       // 写入文件
       await writeTextFile(filePath, data);
-      
-      alert("✓ 导出成功！备份文件已保存到：\n" + filePath);
+
+      alert("✓ " + t("settings.exportData") + " " + t("common.success") + "！" + t("common.info") + "：\n" + filePath);
     } catch (err) {
-      console.error("导出失败:", err);
-      alert("导出失败：" + err);
+      console.error(t("settings.exportData") + " " + t("common.error") + ":", err);
+      alert(t("settings.exportData") + " " + t("common.error") + "：" + err);
     }
   };
 
@@ -82,22 +89,27 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
     // alert("✓ 导入成功！请刷新页面查看导入的密码");
   };
 
+  const handleLanguageChange = (language: string) => {
+    i18n.changeLanguage(language);
+    localStorage.setItem('language', language);
+  };
+
   const handleChangeMasterPassword = async () => {
     setError("");
     setSuccess("");
 
     if (!oldPassword || !newPassword || !confirmPassword) {
-      setError("请填写所有字段");
+      setError(t("changeMasterPassword.allFieldsRequired"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("新密码两次输入不一致");
+      setError(t("changeMasterPassword.passwordMismatch"));
       return;
     }
 
     if (newPassword.length < 8) {
-      setError("新密码至少需要 8 个字符");
+      setError(t("changeMasterPassword.passwordTooShort"));
       return;
     }
 
@@ -106,7 +118,7 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
         oldPassword: oldPassword,
         newPassword: newPassword,
       });
-      setSuccess("主密码修改成功！2 秒后将自动锁定，请使用新密码重新登录");
+      setSuccess(t("changeMasterPassword.success"));
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -121,20 +133,38 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
   return (
     <div className="settings-container">
       <div className="settings-header">
-        <h1>⚙️ 设置</h1>
+        <h1>⚙️ {t("settings.title")}</h1>
       </div>
 
-
-  
-
       <div className="settings-content">
+        <div className="settings-section">
+          <h2>🎨 {t("settings.appearance")}</h2>
 
-       <div className="settings-section">
-          <h2>🎨 外观设置</h2>
+          {/* 语言选择  */}
           <div className="setting-item full-width">
             <div className="setting-info">
-              <h3>主题</h3>
-              <p>选择你喜欢的配色方案</p>
+              <h3>{t("settings.language")}</h3>
+              <p>{t("settings.languageDescription")}</p>
+            </div>
+            <div className="language-selector">
+              {languageOptions.map((option) => (
+                <button
+                  key={option.value}
+                  className={`language-option ${i18n.language === option.value ? "active" : ""}`}
+                  onClick={() => handleLanguageChange(option.value)}
+                >
+                  <span className="language-label">{option.label}</span>
+                  {i18n.language === option.value && <span className="language-check">✓</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 主题选择 */}
+          <div className="setting-item full-width">
+            <div className="setting-info">
+              <h3>{t("settings.theme")}</h3>
+              <p>{t("settings.themeDescription")}</p>
             </div>
             <div className="theme-selector">
               {themeOptions.map((option) => (
@@ -150,27 +180,28 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
               ))}
             </div>
           </div>
+
         </div>
 
         <div className="settings-section">
-          <h2>🔒 安全设置</h2>
+          <h2>🔒 {t("settings.security")}</h2>
           <div className="setting-item">
             <div className="setting-info">
-              <h3>主密码</h3>
-              <p>用于加密和解密所有密码数据</p>
+              <h3>{t("settings.masterPassword")}</h3>
+              <p>{t("settings.masterPasswordDescription")}</p>
             </div>
             <button
               className="setting-action-btn"
               onClick={() => setShowChangeMasterPassword(true)}
             >
-              更改主密码
+              {t("settings.changeMasterPassword")}
             </button>
           </div>
 
           <div className="setting-item full-width">
             <div className="setting-info">
-              <h3>自动锁定</h3>
-              <p>一段时间不活动后自动锁定应用（也可以点击侧边栏底部的🔒按钮立即锁定）</p>
+              <h3>{t("settings.autoLock")}</h3>
+              <p>{t("settings.autoLockDescription")}</p>
             </div>
             <div className="time-selector">
               {autoLockOptions.map((option) => (
@@ -188,42 +219,40 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
 
 
         <div className="settings-section">
-          <h2>💾 数据管理</h2>
+          <h2>💾 {t("settings.dataManagement")}</h2>
           <div className="setting-item">
             <div className="setting-info">
-              <h3>导出数据</h3>
-              <p>将所有密码导出为加密备份文件</p>
+              <h3>{t("settings.exportData")}</h3>
+              <p>{t("settings.exportDataDescription")}</p>
             </div>
             <button className="setting-action-btn" onClick={handleExportData}>
-              📤 导出
+              📤 {t("settings.export")}
             </button>
           </div>
 
           <div className="setting-item">
             <div className="setting-info">
-              <h3>导入数据</h3>
-              <p>从备份文件或 Chrome 导入密码</p>
+              <h3>{t("settings.importData")}</h3>
+              <p>{t("settings.importDataDescription")}</p>
             </div>
             <button
               className="setting-action-btn"
               onClick={() => setShowImportDialog(true)}
             >
-              📥 导入
+              📥 {t("settings.import")}
             </button>
           </div>
         </div>
 
-   
-
         <div className="settings-section danger-section">
-          <h2>⚠️ 危险操作</h2>
+          <h2>⚠️ {t("settings.dangerZone")}</h2>
           <div className="setting-item">
             <div className="setting-info">
-              <h3>清除所有数据</h3>
-              <p>删除所有密码和设置，无法恢复</p>
+              <h3>{t("settings.clearAllData")}</h3>
+              <p>{t("settings.clearAllDataDescription")}</p>
             </div>
             <button className="setting-action-btn danger-btn" disabled>
-              清除（即将推出）
+              {t("settings.clear")}
             </button>
           </div>
         </div>
@@ -233,7 +262,7 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
         <div className="change-password-overlay">
           <div className="change-password-dialog">
             <div className="dialog-header">
-              <h2>🔑 更改主密码</h2>
+              <h2>🔑 {t("changeMasterPassword.title")}</h2>
               <button
                 onClick={() => {
                   setShowChangeMasterPassword(false);
@@ -254,33 +283,33 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
               {success && <div className="success-box">{success}</div>}
 
               <div className="form-group">
-                <label>当前主密码</label>
+                <label>{t("changeMasterPassword.currentPassword")}</label>
                 <input
                   type="password"
                   value={oldPassword}
                   onChange={(e) => setOldPassword(e.target.value)}
-                  placeholder="输入当前主密码"
+                  placeholder={t("changeMasterPassword.currentPasswordPlaceholder")}
                   autoFocus
                 />
               </div>
 
               <div className="form-group">
-                <label>新主密码</label>
+                <label>{t("changeMasterPassword.newPassword")}</label>
                 <input
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="至少 8 个字符"
+                  placeholder={t("changeMasterPassword.newPasswordPlaceholder")}
                 />
               </div>
 
               <div className="form-group">
-                <label>确认新密码</label>
+                <label>{t("changeMasterPassword.confirmPassword")}</label>
                 <input
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="再次输入新密码"
+                  placeholder={t("changeMasterPassword.confirmPasswordPlaceholder")}
                 />
               </div>
             </div>
@@ -290,10 +319,10 @@ function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeCha
                 onClick={() => setShowChangeMasterPassword(false)}
                 className="cancel-btn"
               >
-                取消
+                {t("forms.cancel")}
               </button>
               <button onClick={handleChangeMasterPassword} className="confirm-btn">
-                确认更改
+                {t("changeMasterPassword.confirmChange")}
               </button>
             </div>
           </div>

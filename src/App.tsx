@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useTranslation } from "react-i18next";
 import Login from "./components/Login";
 import GroupList from "./components/GroupList";
 import GroupForm from "./components/GroupForm";
@@ -12,9 +13,13 @@ import ToastContainer from "./components/ToastContainer";
 import { PasswordEntry, PasswordGroup } from "./types";
 import { useKeyboard } from "./hooks/useKeyboard";
 import { useToast } from "./hooks/useToast";
+import { useResponsive } from "./hooks/useResponsive";
 import "./App.css";
+import "./styles/responsive/index.css";
 
 function App() {
+  const { t } = useTranslation();
+  const { isMobile } = useResponsive(); // 响应式状态
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState("passwords");
   const [entries, setEntries] = useState<PasswordEntry[]>([]);
@@ -34,19 +39,13 @@ function App() {
     const savedTheme = localStorage.getItem("theme") || "default";
     setTheme(savedTheme);
     document.documentElement.setAttribute("data-theme", savedTheme);
+    
+    // 设置 HTML lang 属性
+    const savedLanguage = localStorage.getItem("language") || "zh-CN";
+    document.documentElement.setAttribute("lang", savedLanguage);
   }, []);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadEntries();
-      loadGroups();
-      // 加载自动锁定设置
-      const savedTimeout = localStorage.getItem("autoLockTimeout");
-      if (savedTimeout) {
-        setAutoLockTimeout(parseInt(savedTimeout, 10));
-      }
-    }
-  }, [isAuthenticated]);
+
 
   // 自动锁定逻辑
   useEffect(() => {
@@ -58,7 +57,7 @@ function App() {
       if (timeoutId) clearTimeout(timeoutId);
       
       timeoutId = setTimeout(() => {
-        console.log("自动锁定触发");
+        console.log(t("common.autoLockTriggered"));
         setIsAuthenticated(false);
         setEntries([]);
         setCurrentView("passwords");
@@ -94,7 +93,16 @@ function App() {
   const loadGroups = async () => {
     try {
       const data = await invoke<PasswordGroup[]>("get_all_groups");
-      setGroups(data);
+      // 按 sort_order 排序
+      const sorted = data.sort((a, b) => {
+        if (a.sort_order !== undefined && b.sort_order !== undefined) {
+          return a.sort_order - b.sort_order;
+        }
+        if (a.sort_order !== undefined) return -1;
+        if (b.sort_order !== undefined) return 1;
+        return a.created_at - b.created_at;
+      });
+      setGroups(sorted);
     } catch (error) {
       console.error("Failed to load groups:", error);
       // 如果后端还没实现，使用默认分组
@@ -102,8 +110,23 @@ function App() {
     }
   };
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
+  const handleLogin = async () => {
+    // 开始加载数据
+    try {
+      await Promise.all([loadEntries(), loadGroups()]);
+      
+      // 加载自动锁定设置
+      const savedTimeout = localStorage.getItem("autoLockTimeout");
+      if (savedTimeout) {
+        setAutoLockTimeout(parseInt(savedTimeout, 10));
+      }
+      
+      // 数据加载完成后才设置为已认证
+      setIsAuthenticated(true);
+    } catch (error) {
+      console.error("Failed to load data:", error);
+      throw error; // 抛出错误让 Login 组件处理
+    }
   };
 
   const handleAddEntry = () => {
@@ -166,10 +189,10 @@ function App() {
       await loadEntries();
       setShowForm(false);
       setEditingEntry(undefined);
-      toast.success(editingEntry ? "密码已更新" : "密码已添加");
+      toast.success(editingEntry ? t("passwords.passwordUpdated") : t("passwords.passwordAdded"));
     } catch (error) {
       console.error("Failed to save entry:", error);
-      toast.error("保存失败：" + error);
+      toast.error(t("passwords.saveFailed") + "：" + error);
     }
   };
 
@@ -177,10 +200,10 @@ function App() {
     try {
       await invoke("delete_entry", { id });
       await loadEntries();
-      toast.success("密码已删除");
+      toast.success(t("passwords.passwordDeleted"));
     } catch (error) {
       console.error("Failed to delete entry:", error);
-      toast.error("删除失败：" + error);
+      toast.error(t("passwords.deleteFailed") + "：" + error);
     }
   };
 
@@ -199,7 +222,7 @@ function App() {
       console.log("数据重新加载完成");
     } catch (error) {
       console.error("Failed to update order:", error);
-      toast.error("更新顺序失败：" + error);
+      toast.error(t("passwords.updateOrderFailed") + "：" + error);
     }
   };
 
@@ -248,10 +271,10 @@ function App() {
       await loadGroups();
       setShowGroupForm(false);
       setEditingGroup(undefined);
-      toast.success(editingGroup ? "分组已更新" : "分组已创建");
+      toast.success(editingGroup ? t("groups.groupUpdated") : t("groups.groupAdded"));
     } catch (error) {
       console.error("Failed to save group:", error);
-      toast.error("保存分组失败：" + error);
+      toast.error(t("groups.saveGroupFailed") + "：" + error);
     }
   };
 
@@ -262,10 +285,27 @@ function App() {
       if (selectedGroupId === groupId) {
         setSelectedGroupId(null);
       }
-      toast.success("分组已删除");
+      toast.success(t("groups.groupDeleted"));
     } catch (error) {
       console.error("Failed to delete group:", error);
-      toast.error("删除分组失败：" + error);
+      toast.error(t("groups.deleteGroupFailed") + "：" + error);
+    }
+  };
+
+  const handleUpdateGroupOrder = async (updatedGroups: PasswordGroup[]) => {
+    // 乐观更新 UI
+    setGroups(updatedGroups);
+    
+    try {
+      // 批量更新后端
+      for (const group of updatedGroups) {
+        await invoke("update_group", { group });
+      }
+    } catch (error) {
+      console.error("Failed to update group order:", error);
+      toast.error(t("groups.updateGroupOrderFailed") + "：" + error);
+      // 失败时重新加载
+      await loadGroups();
     }
   };
 
@@ -306,26 +346,57 @@ function App() {
     ? entries.filter((entry) => entry.group_id === selectedGroupId)
     : entries;
 
+  const handleMoveToGroup = async (entryId: string, targetGroupId: string | null) => {
+    // 找到被拖动的密码条目
+    const entry = entries.find((e) => e.id === entryId);
+    if (!entry) return;
+    
+    // 如果分组没有变化，不做任何操作
+    if (entry.group_id === targetGroupId) return;
+    
+    // 更新密码的分组
+    const updatedEntry = { ...entry, group_id: targetGroupId };
+    
+    try {
+      await invoke("update_entry", { entry: updatedEntry });
+      await loadEntries();
+      
+      const groupName = targetGroupId 
+        ? groups.find(g => g.id === targetGroupId)?.name || t("groups.title")
+        : t("passwords.allPasswords");
+      toast.success(t("passwords.movedToGroup", { groupName }));
+    } catch (error) {
+      console.error("Failed to move entry:", error);
+      toast.error(t("passwords.moveFailed") + "：" + error);
+    }
+  };
+
   const renderView = () => {
     switch (currentView) {
       case "passwords":
         return (
           <div className="three-column-layout">
-            <GroupList
-              groups={groups}
-              selectedGroupId={selectedGroupId}
-              onSelectGroup={setSelectedGroupId}
-              onAddGroup={handleAddGroup}
-              onEditGroup={handleEditGroup}
-              onDeleteGroup={handleDeleteGroup}
-              entryCountByGroup={entryCountByGroup}
-            />
+            {/* 分组列表 - 桌面端显示，移动端隐藏 */}
+            {!isMobile && (
+              <GroupList
+                groups={groups}
+                selectedGroupId={selectedGroupId}
+                onSelectGroup={setSelectedGroupId}
+                onAddGroup={handleAddGroup}
+                onEditGroup={handleEditGroup}
+                onDeleteGroup={handleDeleteGroup}
+                onUpdateGroupOrder={handleUpdateGroupOrder}
+                entryCountByGroup={entryCountByGroup}
+              />
+            )}
+            {/* 密码列表 - 始终显示 */}
             <PasswordList
               entries={filteredEntries}
               onEdit={handleEditEntry}
               onDelete={handleDeleteEntry}
               onAdd={handleAddEntry}
               onUpdateOrder={handleUpdateOrder}
+              onMoveToGroup={handleMoveToGroup}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
             />
@@ -349,21 +420,27 @@ function App() {
       default:
         return (
           <div className="three-column-layout">
-            <GroupList
-              groups={groups}
-              selectedGroupId={selectedGroupId}
-              onSelectGroup={setSelectedGroupId}
-              onAddGroup={handleAddGroup}
-              onEditGroup={handleEditGroup}
-              onDeleteGroup={handleDeleteGroup}
-              entryCountByGroup={entryCountByGroup}
-            />
+            {/* 分组列表 - 桌面端显示，移动端隐藏 */}
+            {!isMobile && (
+              <GroupList
+                groups={groups}
+                selectedGroupId={selectedGroupId}
+                onSelectGroup={setSelectedGroupId}
+                onAddGroup={handleAddGroup}
+                onEditGroup={handleEditGroup}
+                onDeleteGroup={handleDeleteGroup}
+                onUpdateGroupOrder={handleUpdateGroupOrder}
+                entryCountByGroup={entryCountByGroup}
+              />
+            )}
+            {/* 密码列表 - 始终显示 */}
             <PasswordList
               entries={filteredEntries}
               onEdit={handleEditEntry}
               onDelete={handleDeleteEntry}
               onAdd={handleAddEntry}
               onUpdateOrder={handleUpdateOrder}
+              onMoveToGroup={handleMoveToGroup}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
             />
@@ -380,39 +457,35 @@ function App() {
     <div className="app-container">
       {/* 顶部工具栏 */}
       <header className="app-header">
-        <div className="header-left">
-          <span className="app-logo">🔐</span>
-          <span className="app-title">2Pass</span>
-        </div>
         <nav className="header-nav">
           <button
             className={`nav-btn ${currentView === "passwords" ? "active" : ""}`}
             onClick={() => handleViewChange("passwords")}
           >
-            🔐 密码
+            🔐 {t("nav.passwords")}
           </button>
           <button
             className={`nav-btn ${currentView === "generator" ? "active" : ""}`}
             onClick={() => handleViewChange("generator")}
           >
-            🎲 生成器
+            🎲 {t("nav.generator")}
           </button>
           <button
             className={`nav-btn ${currentView === "settings" ? "active" : ""}`}
             onClick={() => handleViewChange("settings")}
           >
-            ⚙️ 设置
+            ⚙️ {t("nav.settings")}
           </button>
           <button
             className={`nav-btn ${currentView === "about" ? "active" : ""}`}
             onClick={() => handleViewChange("about")}
           >
-            ℹ️ 关于
+            ℹ️ {t("nav.about")}
           </button>
         </nav>
         <div className="header-right">
-          <button onClick={handleLock} className="lock-btn" title="锁定应用">
-            🔒 锁定
+          <button onClick={handleLock} className="lock-btn" title={t("nav.lock")}>
+            🔒 {t("nav.lock")}
           </button>
         </div>
       </header>

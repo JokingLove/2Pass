@@ -47,34 +47,13 @@ button {
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 10px 20px;
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
   height: 60px;
   box-shadow: var(--shadow-sm);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.app-logo {
-  font-size: 22px;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-}
-
-.app-title {
-  font-size: 17px;
-  font-weight: 700;
-  background: var(--primary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  letter-spacing: -0.5px;
 }
 
 .header-nav {
@@ -84,6 +63,7 @@ button {
   padding: 5px;
   border-radius: 12px;
   box-shadow: inset 0 1px 2px var(--border-color);
+  flex: 0 0 auto;
 }
 
 .nav-btn {
@@ -114,6 +94,8 @@ button {
 .header-right {
   display: flex;
   gap: 8px;
+  position: absolute;
+  right: 20px;
 }
 
 .lock-btn {
@@ -170,9 +152,90 @@ button {
   background: var(--text-secondary);
 }
 
+/* Loading 状态 */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: var(--bg-color);
+}
+
+.loading-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-content p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .app-layout {
     flex-direction: column;
   }
+}
+
+/* 三列布局 */
+.three-column-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* DnD Kit 拖动样式 */
+.dragging {
+  opacity: 0.5;
+}
+
+/* 拖动覆盖层 - 确保拖动的元素在最上层 */
+[data-dnd-kit-overlay] {
+  position: fixed !important;
+  z-index: 99999 !important;
+  pointer-events: none !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+[data-dnd-kit-overlay] * {
+  pointer-events: none;
+}
+
+/* 拖动中的元素样式 */
+.entry-card.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.group-item.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+/* 确保所有 DnD 相关元素都在正确的层级 */
+body > div[style*="position: fixed"] {
+  z-index: 99999 !important;
 }

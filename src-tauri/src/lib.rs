@@ -637,19 +637,38 @@ fn import_encrypted_data(
     // 解密数据
     let key = derive_key(&password);
     let decrypted = decrypt_data(&import_data.encrypted_data, &import_data.nonce, &key)?;
-    let import_entries: Vec<PasswordEntry> =
-        serde_json::from_str(&decrypted).map_err(|e| format!("数据解密失败: {}", e))?;
+    
+    // 尝试解析为 AppData（新格式，包含 entries 和 groups）
+    let (import_entries, import_groups) = if let Ok(app_data) = serde_json::from_str::<AppData>(&decrypted) {
+        (app_data.entries, app_data.groups)
+    } else {
+        // 兼容旧格式（只有 entries）
+        let entries: Vec<PasswordEntry> = serde_json::from_str(&decrypted)
+            .map_err(|e| format!("数据解密失败: {}", e))?;
+        (entries, Vec::new())
+    };
 
-    // 合并到现有数据（避免ID冲突）
-    let existing_ids: std::collections::HashSet<String> =
+    // 合并密码条目（避免ID冲突）
+    let existing_entry_ids: std::collections::HashSet<String> =
         app_state.entries.iter().map(|e| e.id.clone()).collect();
 
     let mut imported_count = 0;
     for mut entry in import_entries {
-        if !existing_ids.contains(&entry.id) {
+        if !existing_entry_ids.contains(&entry.id) {
             entry.sort_order = Some((app_state.entries.len() + imported_count) as i64);
             app_state.entries.push(entry);
             imported_count += 1;
+        }
+    }
+
+    // 合并分组（避免ID冲突）
+    let existing_group_ids: std::collections::HashSet<String> =
+        app_state.groups.iter().map(|g| g.id.clone()).collect();
+
+    for mut group in import_groups {
+        if !existing_group_ids.contains(&group.id) {
+            group.sort_order = app_state.groups.len() as i64;
+            app_state.groups.push(group);
         }
     }
 

@@ -75,16 +75,16 @@
 }
 
 .type-btn:hover {
-  border-color: #667eea;
-  background: #f0f4ff;
-  color: #667eea;
+  border-color: var(--primary-color);
+  background: var(--primary-light);
+  color: var(--primary-color);
 }
 
 .type-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-gradient);
   color: white;
   border-color: transparent;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px var(--primary-shadow);
 }
 
 .import-section h3 {
@@ -115,7 +115,7 @@
 .file-label {
   display: inline-block;
   padding: 14px 28px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-gradient);
   color: white;
   border-radius: 10px;
   font-size: 1rem;
@@ -126,7 +126,7 @@
 
 .file-label:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 16px var(--primary-shadow);
 }
 
 .file-selected {
@@ -177,8 +177,8 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px var(--primary-light);
 }
 
 .error-box {
@@ -229,18 +229,40 @@
 }
 
 .import-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-gradient);
   color: white;
 }
 
 .import-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 16px var(--primary-shadow);
 }
 
 .import-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.import-btn.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.button-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 768px) {
@@ -279,10 +301,10 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-gradient);
   border-radius: 16px;
   transition: width 0.3s ease-out;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 2px 8px var(--primary-shadow);
   position: relative;
   overflow: hidden;
 }
@@ -317,7 +339,7 @@
   text-align: center;
   font-weight: 600;
   font-size: 1rem;
-  color: #667eea;
+  color: var(--primary-color);
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 }
 

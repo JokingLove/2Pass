@@ -3,8 +3,26 @@
   height: 100%;
   background: var(--bg-color);
   overflow-y: auto;
-  padding: 20px;
-  overflow-y: auto;
+  padding: 24px 16px 24px 24px; /* 右侧减少 8px 补偿滚动条 */
+}
+
+/* 自定义滚动条样式 */
+.settings-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.settings-container::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 24px 0; /* 上下留白 */
+}
+
+.settings-container::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.settings-container::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 .settings-header {
@@ -152,7 +170,6 @@
 .time-option.active {
   background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
   color: white;
-  border-color: transparent;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
@@ -393,13 +410,13 @@
 }
 
 .dialog-actions .confirm-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--primary-gradient);
   color: white;
 }
 
 .dialog-actions .confirm-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 6px 16px var(--primary-shadow);
 }
 
 @media (max-width: 768px) {
@@ -423,3 +440,50 @@
   }
 }
 
+/* 语言选择器样式 */
+.language-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.language-option {
+  padding: 12px 22px;
+  background: rgba(248, 249, 250, 0.8);
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-secondary);
+  min-width: 120px;
+  text-align: center;
+}
+
+.language-option:hover {
+  border-color: var(--primary-start);
+  background: #f0f4ff;
+  color: var(--primary-start);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.language-option.active {
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  position: relative;
+}
+
+.language-option.active:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.language-check {
+  margin-left: 8px;
+  font-weight: 700;
+}

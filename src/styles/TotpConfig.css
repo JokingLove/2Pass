@@ -130,7 +130,7 @@
 }
 
 .apply-btn {
-  background: #28a745;
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
   color: white;
 }
 
@@ -205,12 +205,11 @@
 }
 
 .test-btn {
-  background: #17a2b8;
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
   color: white;
 }
 
 .test-btn:hover {
-  background: #138496;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3);
 }

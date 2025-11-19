@@ -1,0 +1,106 @@
+/* 移动端专用样式 (≤768px) */
+@media (max-width: 768px) {
+  /* 隐藏分组侧边栏 */
+  .group-list-container {
+    display: none;
+  }
+
+  /* 主内容区域占满全宽 */
+  .password-list-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* 三列布局在移动端变为单列 */
+  .three-column-layout {
+    flex-direction: column;
+  }
+
+  /* 顶部导航栏优化 */
+  .app-header {
+    padding: 8px 12px;
+    height: auto;
+  }
+
+  .header-nav {
+    gap: 4px;
+    padding: 4px;
+    flex-wrap: wrap;
+  }
+
+  .nav-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .header-right {
+    position: static;
+    margin-top: 8px;
+    width: 100%;
+  }
+
+  .lock-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* 密码列表优化 */
+  .password-list-header {
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  .add-btn {
+    width: 100%;
+  }
+
+  /* 密码卡片优化 */
+  .entry-card {
+    padding: 12px;
+  }
+
+  .entry-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .entry-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* 表单弹窗优化 */
+  .modal-content {
+    width: 95%;
+    max-width: 95%;
+    margin: 10px;
+    max-height: 90vh;
+  }
+
+  /* 密码生成器优化 */
+  .generator-container {
+    padding: 12px;
+  }
+
+  .generator-result {
+    font-size: 16px;
+    padding: 12px;
+  }
+
+  /* 设置页面优化 */
+  .settings-container {
+    padding: 12px;
+  }
+
+  .settings-section {
+    padding: 12px;
+  }
+}

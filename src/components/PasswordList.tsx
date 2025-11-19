@@ -14,12 +14,14 @@ import {
   rectSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useTranslation } from "react-i18next";
 import { PasswordListProps, PasswordEntry } from "../types";
 import TotpDisplay from "./TotpDisplay";
 import PasswordHistory from "./PasswordHistory";
 import ConfirmDialog from "./ConfirmDialog";
-import { copyToClipboardWithTimeout, highlightText } from "../utils/clipboard";
+import { highlightText } from "../utils/clipboard";
 import { useKeyboard } from "../hooks/useKeyboard";
+import { useCopy } from "../hooks/useCopy";
 import "../styles/PasswordList.css";
 
 interface SortableCardProps {
@@ -59,6 +61,7 @@ function SortablePasswordCard({
   onToggleExpand,
   onToggleHistory,
 }: SortableCardProps) {
+  const { t } = useTranslation();
   const {
     attributes,
     listeners,
@@ -168,7 +171,7 @@ function SortablePasswordCard({
         }}
       >
         {!isMultiSelectMode && (
-          <div className="drag-handle" {...attributes} {...listeners} title="按住拖动排序">
+          <div className="drag-handle" {...attributes} {...listeners} title={t("passwords.dragToSort")}>
             ⋮⋮
           </div>
         )}
@@ -187,7 +190,7 @@ function SortablePasswordCard({
               await onCopyToClipboard(entry.username, `quick-user-${entry.id}`);
             }}
             className={`action-btn quick-copy-user-btn ${copiedId === `quick-user-${entry.id}` ? 'copied' : ''}`}
-            title="快速复制用户名"
+            title={t("passwords.copyUsername")}
           >
             {copiedId === `quick-user-${entry.id}` ? "✓" : "👤"}
           </button>
@@ -216,7 +219,7 @@ function SortablePasswordCard({
               }
             }}
             className={`action-btn quick-copy-btn ${copiedId === `quick-${entry.id}` ? 'copied' : ''}`}
-            title={entry.totp_secret ? "快速复制组合密码" : "快速复制密码"}
+            title={entry.totp_secret ? t("passwords.copyPassword") + " + TOTP" : t("passwords.copyPassword")}
           >
             {copiedId === `quick-${entry.id}` ? "✓" : "🔑"}
           </button>
@@ -227,7 +230,7 @@ function SortablePasswordCard({
               onEdit(entry);
             }}
             className="action-btn edit-btn"
-            title="编辑"
+            title={t("forms.edit")}
           >
             ✏️
           </button>
@@ -238,7 +241,7 @@ function SortablePasswordCard({
               onConfirmDelete(entry);
             }}
             className="action-btn delete-btn"
-            title="删除"
+            title={t("forms.delete")}
           >
             🗑️
           </button>
@@ -261,7 +264,7 @@ function SortablePasswordCard({
                     title={url}
                     // onClick={(e) => e.stopPropagation()}
                   >
-                    <span className="info-label">🌐 网址</span>
+                    <span className="info-label">🌐 {t("passwords.website")}</span>
                     <div className="info-value-group">
                       <span className="info-value">{highlightText(url, searchTerm)}</span>
                       <span className="link-arrow">→</span>
@@ -274,7 +277,7 @@ function SortablePasswordCard({
 
           {/* 用户名 */}
           <div className="info-row">
-            <span className="info-label">👤 用户名</span>
+            <span className="info-label">👤 {t("passwords.username")}</span>
             <div className="info-value-group">
               <span className="info-value">{highlightText(entry.username, searchTerm)}</span>
               <button
@@ -283,7 +286,7 @@ function SortablePasswordCard({
                   await onCopyToClipboard(entry.username, `user-${entry.id}`);
                 }}
                 className={`icon-btn ${copiedId === `user-${entry.id}` ? 'copied' : ''}`}
-                title="复制用户名"
+                title={t("passwords.copyUsername")}
               >
                 {copiedId === `user-${entry.id}` ? "✓" : "📋"}
               </button>
@@ -292,7 +295,7 @@ function SortablePasswordCard({
 
           {/* 密码 */}
           <div className="info-row">
-            <span className="info-label">🔑 密码</span>
+            <span className="info-label">🔑 {t("passwords.password")}</span>
             <div className="info-value-group">
               <span className="info-value password-value">
                 {showPassword === entry.id ? entry.password : "••••••••"}
@@ -303,7 +306,7 @@ function SortablePasswordCard({
                   onTogglePassword(entry.id);
                 }}
                 className="icon-btn"
-                title="显示/隐藏"
+                title={showPassword === entry.id ? t("passwords.hidePassword") : t("passwords.showPassword")}
               >
                 {showPassword === entry.id ? "🙈" : "👁️"}
               </button>
@@ -313,7 +316,7 @@ function SortablePasswordCard({
                   await onCopyToClipboard(entry.password, `pass-${entry.id}`);
                 }}
                 className={`icon-btn ${copiedId === `pass-${entry.id}` ? 'copied' : ''}`}
-                title="复制密码"
+                title={t("passwords.copyPassword")}
               >
                 {copiedId === `pass-${entry.id}` ? "✓" : "📋"}
               </button>
@@ -323,7 +326,7 @@ function SortablePasswordCard({
           {/* 备注 */}
           {entry.notes && (
             <div className="info-row notes-row">
-              <span className="info-label">📝 备注</span>
+              <span className="info-label">📝 {t("passwords.notes")}</span>
               <div className="info-value notes-content">
                 {highlightText(entry.notes, searchTerm)}
               </div>
@@ -333,7 +336,7 @@ function SortablePasswordCard({
           {/* 标签 */}
           {entry.tags && entry.tags.length > 0 && (
             <div className="info-row tags-row">
-              <span className="info-label">🏷️ 标签</span>
+              <span className="info-label">🏷️ {t("passwords.tags")}</span>
               <div className="entry-tags">
                 {entry.tags.map((tag, index) => (
                   <span key={tag} className={`entry-tag tag-color-${index % 6}`}>
@@ -370,11 +373,13 @@ function PasswordList({
   onDelete,
   onAdd,
   onUpdateOrder,
+  onMoveToGroup,
   searchTerm,
   onSearchChange,
 }: PasswordListProps) {
+  const { t } = useTranslation();
+  const { copiedId, copyToClipboard } = useCopy();
   const [showPassword, setShowPassword] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isSavingOrder, setIsSavingOrder] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<PasswordEntry | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -429,15 +434,7 @@ function PasswordList({
     return matchesSearch && matchesTag;
   });
 
-  const copyToClipboard = async (text: string, id: string) => {
-    try {
-      await copyToClipboardWithTimeout(text, 30000); // 30秒后自动清空
-      setCopiedId(id);
-      setTimeout(() => setCopiedId(null), 2000);
-    } catch (error) {
-      console.error('复制失败:', error);
-    }
-  };
+  // copyToClipboard 已通过 useCopy hook 提供
 
   const toggleExpand = (id: string) => {
     const newExpanded = new Set(expandedIds);
@@ -535,7 +532,7 @@ function PasswordList({
       setSelectedIds(new Set());
       setIsMultiSelectMode(false);
     } catch (error) {
-      console.error("批量删除失败:", error);
+      console.error(t("passwords.deleteFailed") + ":", error);
     } finally {
       setBatchDeleteConfirm(false);
     }
@@ -548,12 +545,25 @@ function PasswordList({
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over || active.id === over.id) {
+    if (!over) {
       return;
     }
+
+    // 检查是否拖到分组上
+    if (over.id.toString().startsWith("group-")) {
+      const entryId = active.id.toString();
+      const targetGroupId = over.data.current?.groupId;
+      onMoveToGroup?.(entryId, targetGroupId);
+      return;
+    }
+
+    // 原有的排序逻辑
+    if (active.id === over.id) {
+      return;
+    }
+
     const oldIndex = sortedEntries.findIndex((e) => e.id === active.id);
     const newIndex = sortedEntries.findIndex((e) => e.id === over.id);
-
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const reordered = arrayMove(sortedEntries, oldIndex, newIndex);
@@ -567,7 +577,7 @@ function PasswordList({
       try {
         await onUpdateOrder(updatedEntries);
       } catch (error) {
-        console.error("❌ 保存失败:", error);
+        console.error("❌ " + t("passwords.saveFailed") + ":", error);
       } finally {
         setIsSavingOrder(false);
       }
@@ -578,34 +588,34 @@ function PasswordList({
     <div className="password-list-container">
       <div className="list-header">
         <div className="header-top">
-          <h1>🔐 2Pass 密码管理器</h1>
+          <h1>🔐 {t("app.title")}</h1>
           <div className="header-actions">
             {isMultiSelectMode ? (
               <>
                 <button onClick={selectAll} className="batch-btn select-btn">
-                  全选
+                  {t("passwords.selectAll")}
                 </button>
                 <button onClick={deselectAll} className="batch-btn deselect-btn">
-                  取消全选
+                  {t("forms.cancel")}
                 </button>
                 <button
                   onClick={batchDelete}
                   className="batch-btn delete-btn"
                   disabled={selectedIds.size === 0}
                 >
-                  🗑️ 删除选中 ({selectedIds.size})
+                  🗑️ {t("forms.delete")} ({selectedIds.size})
                 </button>
                 <button onClick={toggleMultiSelect} className="batch-btn cancel-btn">
-                  退出批量
+                  {t("passwords.exitBatch")}
                 </button>
               </>
             ) : (
               <>
                 <button onClick={toggleMultiSelect} className="batch-mode-btn">
-                  ☑️ 批量管理
+                  ☑️ {t("passwords.batchManage")}
                 </button>
                 <button onClick={onAdd} className="add-button">
-                  ➕ 添加密码
+                  ➕ {t("passwords.addPassword")}
                 </button>
               </>
             )}
@@ -615,7 +625,7 @@ function PasswordList({
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="🔍 搜索标题、用户名、网址或备注... (Cmd/Ctrl+F)"
+            placeholder={t("passwords.search")}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
           />
@@ -641,12 +651,12 @@ function PasswordList({
         )}
         {!searchTerm && entries.length > 1 && !isMultiSelectMode && (
           <div className="drag-hint">
-            💡 提示：按住卡片左上角的 ⋮⋮ 图标拖动调整顺序，或长按卡片进入批量选择模式
+            💡 {t("passwords.dragHint")}
           </div>
         )}
         {isMultiSelectMode && (
           <div className="drag-hint">
-            💡 提示：按 ESC 键退出批量选择模式
+            💡 {t("passwords.escHint")}
           </div>
         )}
         {isSavingOrder && (
@@ -659,8 +669,8 @@ function PasswordList({
           <div className="empty-state">
             <p>
               {searchTerm
-                ? "😕 没有找到匹配的密码"
-                : "📝 还没有保存任何密码，点击上方按钮添加"}
+                ? "😕 " + t("passwords.noMatchingPasswords")
+                : "📝 " + t("passwords.noPasswordsYet")}
             </p>
           </div>
         ) : searchTerm ? (
@@ -724,8 +734,8 @@ function PasswordList({
 
       {deleteConfirm && (
         <ConfirmDialog
-          title="确认删除"
-          message={`确定要删除 "${deleteConfirm.title}" 吗？此操作无法撤销。`}
+          title={t("passwords.deletePassword")}
+          message={`${t("forms.confirm")} "${deleteConfirm.title}"？`}
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
         />
@@ -733,8 +743,8 @@ function PasswordList({
 
       {batchDeleteConfirm && (
         <ConfirmDialog
-          title="确认批量删除"
-          message={`确定要删除选中的 ${selectedIds.size} 个密码吗？此操作无法撤销。`}
+          title={t("passwords.deletePassword")}
+          message={`${t("forms.confirm")} ${selectedIds.size} ${t("passwords.password")}？`}
           onConfirm={handleConfirmBatchDelete}
           onCancel={handleCancelBatchDelete}
         />

@@ -31,7 +31,7 @@ export interface PasswordGroup {
 }
 
 export interface LoginProps {
-  onLogin: () => void;
+  onLogin: () => Promise<void>;
 }
 
 export interface PasswordListProps {
@@ -40,6 +40,7 @@ export interface PasswordListProps {
   onDelete: (id: string) => void;
   onAdd: () => void;
   onUpdateOrder: (entries: PasswordEntry[]) => void;
+  onMoveToGroup?: (entryId: string, groupId: string | null) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
 }

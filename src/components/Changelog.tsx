@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import "../styles/Changelog.css";
 
 interface ChangelogEntry {
@@ -56,6 +57,7 @@ const changelogData: ChangelogEntry[] = [
 ];
 
 function Changelog() {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const latestEntry = changelogData[0];
 
@@ -67,7 +69,7 @@ function Changelog() {
       >
         <div className="changelog-latest">
           <span className="changelog-version">{latestEntry.version}</span>
-          <span className="changelog-date">更新于 {latestEntry.date}</span>
+          <span className="changelog-date">{t("passwords.updatedOn")} {latestEntry.date}</span>
         </div>
         <button className="changelog-toggle">
           {isExpanded ? "▼" : "▶"}

@@ -73,6 +73,7 @@ jobs:
           projectPath: src-tauri
           tagName: ${{ github.ref_name }}
           releaseName: '${{ github.ref_name }}'
+          releaseBody: 
           releaseBody: |
             ## 🎉 2Pass ${{ github.ref_name }}
             
@@ -99,6 +100,7 @@ jobs:
             **Full Changelog**: https://github.com/${{ github.repository }}/compare/v1.2.0...${{ github.ref_name }}
           releaseDraft: false
           prerelease: false
+          latest: true
           args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
 
   publish-release:
