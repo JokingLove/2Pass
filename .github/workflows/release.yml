@@ -28,6 +28,8 @@ jobs:
             name: 'Windows'
 
     runs-on: ${{ matrix.platform }}
+    outputs:
+      tag: ${{ github.ref_name }}
     
     steps:
       - name: Checkout repository
@@ -68,6 +70,7 @@ jobs:
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
+          projectPath: src-tauri
           tagName: ${{ github.ref_name }}
           releaseName: '${{ github.ref_name }}'
           releaseBody: |
@@ -93,7 +96,43 @@ jobs:
             
             ---
             
-            **Full Changelog**: https://github.com/JokingLove/2pass/compare/v1.2.0...v1.2.1
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v1.2.0...${{ github.ref_name }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.target != '' && format('--target {0}', matrix.target) || '' }}
+
+  publish-release:
+    needs: release
+    runs-on: ubuntu-latest
+    if: success()
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Publish Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ github.ref_name }}';
+            const { data: releases } = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            const draftRelease = releases.find(r => r.tag_name === tag && r.draft === true);
+            
+            if (draftRelease) {
+              console.log(`Found draft release: ${draftRelease.id}`);
+              await github.rest.repos.updateRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                release_id: draftRelease.id,
+                draft: false,
+                prerelease: false
+              });
+              console.log(`✅ Published release ${tag}`);
+            } else {
+              console.log(`No draft release found for tag ${tag}`);
+            }
