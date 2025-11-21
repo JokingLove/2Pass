@@ -39,7 +39,7 @@ function App() {
     const savedTheme = localStorage.getItem("theme") || "default";
     setTheme(savedTheme);
     document.documentElement.setAttribute("data-theme", savedTheme);
-    
+
     // 设置 HTML lang 属性
     const savedLanguage = localStorage.getItem("language") || "zh-CN";
     document.documentElement.setAttribute("lang", savedLanguage);
@@ -52,10 +52,10 @@ function App() {
     if (!isAuthenticated || autoLockTimeout === 0) return;
 
     let timeoutId: ReturnType<typeof setTimeout>;
-    
+
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
-      
+
       timeoutId = setTimeout(() => {
         console.log(t("common.autoLockTriggered"));
         setIsAuthenticated(false);
@@ -114,13 +114,13 @@ function App() {
     // 开始加载数据
     try {
       await Promise.all([loadEntries(), loadGroups()]);
-      
+
       // 加载自动锁定设置
       const savedTimeout = localStorage.getItem("autoLockTimeout");
       if (savedTimeout) {
         setAutoLockTimeout(parseInt(savedTimeout, 10));
       }
-      
+
       // 数据加载完成后才设置为已认证
       setIsAuthenticated(true);
     } catch (error) {
@@ -144,13 +144,13 @@ function App() {
       if (editingEntry) {
         // 如果是编辑，记录历史
         const history = editingEntry.history || [];
-        
+
         // 检查是否有实质性修改
         const passwordChanged = editingEntry.password !== entry.password;
         const usernameChanged = editingEntry.username !== entry.username;
         const notesChanged = editingEntry.notes !== entry.notes;
         const hasChanges = passwordChanged || usernameChanged || notesChanged;
-        
+
         if (hasChanges) {
           // 创建历史记录对象，只记录发生变化的字段的旧值
           const historyRecord: {
@@ -161,7 +161,7 @@ function App() {
           } = {
             timestamp: editingEntry.updated_at,
           };
-          
+
           if (passwordChanged) {
             historyRecord.password = editingEntry.password;
           }
@@ -171,7 +171,7 @@ function App() {
           if (notesChanged) {
             historyRecord.notes = editingEntry.notes;
           }
-          
+
           // 添加历史记录（最多保留10条）
           const newHistory = [historyRecord, ...history].slice(0, 10);
           entry.history = newHistory;
@@ -179,7 +179,7 @@ function App() {
           // 没有变化，保留原有历史
           entry.history = history;
         }
-        
+
         await invoke("update_entry", { entry });
       } else {
         // 新建条目，初始化空历史
@@ -210,7 +210,7 @@ function App() {
   const handleUpdateOrder = async (updatedEntries: PasswordEntry[]) => {
     console.log("App.tsx: handleUpdateOrder 被调用");
     console.log("要更新的条目数量:", updatedEntries.length);
-    
+
     try {
       // 批量更新所有条目
       for (const entry of updatedEntries) {
@@ -295,7 +295,7 @@ function App() {
   const handleUpdateGroupOrder = async (updatedGroups: PasswordGroup[]) => {
     // 乐观更新 UI
     setGroups(updatedGroups);
-    
+
     try {
       // 批量更新后端
       for (const group of updatedGroups) {
@@ -350,18 +350,18 @@ function App() {
     // 找到被拖动的密码条目
     const entry = entries.find((e) => e.id === entryId);
     if (!entry) return;
-    
+
     // 如果分组没有变化，不做任何操作
     if (entry.group_id === targetGroupId) return;
-    
+
     // 更新密码的分组
     const updatedEntry = { ...entry, group_id: targetGroupId };
-    
+
     try {
       await invoke("update_entry", { entry: updatedEntry });
       await loadEntries();
-      
-      const groupName = targetGroupId 
+
+      const groupName = targetGroupId
         ? groups.find(g => g.id === targetGroupId)?.name || t("groups.title")
         : t("passwords.allPasswords");
       toast.success(t("passwords.movedToGroup", { groupName }));
