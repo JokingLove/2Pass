@@ -32,6 +32,7 @@ function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(0); // 0 表示禁用，单位：分钟
   const [theme, setTheme] = useState<string>("default");
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const toast = useToast();
 
   useEffect(() => {
@@ -110,22 +111,38 @@ function App() {
     }
   };
 
-  const handleLogin = async () => {
-    // 开始加载数据
-    try {
-      await Promise.all([loadEntries(), loadGroups()]);
+  // 监听认证状态，一旦认证通过就开始加载数据
+  useEffect(() => {
+    if (isAuthenticated) {
+      const loadData = async () => {
+        setIsLoadingData(true);
+        try {
+          await Promise.all([loadEntries(), loadGroups()]);
+        } catch (error) {
+          console.error("Failed to load data:", error);
+          toast.error(t("common.loadDataFailed"));
+        } finally {
+          setIsLoadingData(false);
+        }
+      };
+      loadData();
+    }
+  }, [isAuthenticated]);
 
+  const handleLogin = async () => {
+    // 立即进入主界面，数据在后台加载
+    try {
       // 加载自动锁定设置
       const savedTimeout = localStorage.getItem("autoLockTimeout");
       if (savedTimeout) {
         setAutoLockTimeout(parseInt(savedTimeout, 10));
       }
 
-      // 数据加载完成后才设置为已认证
+      // 立即设置为已认证
       setIsAuthenticated(true);
     } catch (error) {
-      console.error("Failed to load data:", error);
-      throw error; // 抛出错误让 Login 组件处理
+      console.error("Login error:", error);
+      throw error;
     }
   };
 
@@ -399,6 +416,7 @@ function App() {
               onMoveToGroup={handleMoveToGroup}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
+              loading={isLoadingData}
             />
           </div>
         );
@@ -443,6 +461,7 @@ function App() {
               onMoveToGroup={handleMoveToGroup}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
+              loading={isLoadingData}
             />
           </div>
         );

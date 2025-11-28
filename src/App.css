@@ -48,34 +48,34 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 20px;
+  padding: 0 var(--spacing-lg);
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
-  height: 60px;
+  height: var(--header-height);
   box-shadow: var(--shadow-sm);
 }
 
 .header-nav {
   display: flex;
-  gap: 6px;
+  gap: var(--spacing-xs);
   background: var(--bg-secondary);
-  padding: 5px;
-  border-radius: 12px;
+  padding: 3px;
+  border-radius: var(--radius-md);
   box-shadow: inset 0 1px 2px var(--border-color);
   flex: 0 0 auto;
 }
 
 .nav-btn {
-  padding: 9px 18px;
+  padding: 6px 12px;
   border: none;
   background: transparent;
   color: #64748b;
-  font-size: 14px;
+  font-size: var(--text-sm);
   cursor: pointer;
-  border-radius: 9px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  font-weight: var(--font-semibold);
   white-space: nowrap;
   position: relative;
 }
@@ -99,18 +99,18 @@ button {
 }
 
 .lock-btn {
-  padding: 9px 18px;
+  padding: 6px 12px;
   border: none;
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: var(--text-sm);
   cursor: pointer;
-  border-radius: 10px;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 600;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-fast);
+  font-weight: var(--font-semibold);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--spacing-xs);
 }
 
 .lock-btn:hover {
@@ -135,8 +135,8 @@ button {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -236,6 +236,6 @@ button {
 }
 
 /* 确保所有 DnD 相关元素都在正确的层级 */
-body > div[style*="position: fixed"] {
+body>div[style*="position: fixed"] {
   z-index: 99999 !important;
 }

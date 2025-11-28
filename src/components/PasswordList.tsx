@@ -161,7 +161,7 @@ function SortablePasswordCard({
           />
         </div>
       )}
-      <div 
+      <div
         className="entry-header"
         onClick={(e) => {
           // 如果点击的不是按钮，则切换展开状态
@@ -176,6 +176,7 @@ function SortablePasswordCard({
           </div>
         )}
         <div className="entry-title-section">
+          <span className="entry-icon">{entry.icon_id || "🔑"}</span>
           <h3>{highlightText(entry.title, searchTerm)}</h3>
           {!isExpanded && (
             <span className="entry-username-preview">{entry.username}</span>
@@ -199,7 +200,7 @@ function SortablePasswordCard({
             onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              
+
               // 如果有 TOTP，复制组合密码
               if (entry.totp_secret) {
                 try {
@@ -262,7 +263,7 @@ function SortablePasswordCard({
                     rel="noopener noreferrer"
                     className="info-row url-row"
                     title={url}
-                    // onClick={(e) => e.stopPropagation()}
+                  // onClick={(e) => e.stopPropagation()}
                   >
                     <span className="info-label">🌐 {t("passwords.website")}</span>
                     <div className="info-value-group">
@@ -376,6 +377,7 @@ function PasswordList({
   onMoveToGroup,
   searchTerm,
   onSearchChange,
+  loading = false,
 }: PasswordListProps) {
   const { t } = useTranslation();
   const { copiedId, copyToClipboard } = useCopy();
@@ -665,7 +667,12 @@ function PasswordList({
       </div>
 
       <div className="entries-container">
-        {filteredEntries.length === 0 ? (
+        {loading ? (
+          <div className="loading-state">
+            <div className="spinner"></div>
+            <p>{t("common.loading")}</p>
+          </div>
+        ) : filteredEntries.length === 0 ? (
           <div className="empty-state">
             <p>
               {searchTerm

@@ -9,6 +9,7 @@ import "../styles/PasswordForm.css";
 function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: PasswordFormProps) {
   const { t } = useTranslation();
   const [title, setTitle] = useState("");
+  const [iconId, setIconId] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [url, setUrl] = useState<string[]>([]);
@@ -27,6 +28,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
   useEffect(() => {
     if (entry) {
       setTitle(entry.title);
+      setIconId(entry.icon_id || "");
       setUsername(entry.username);
       setPassword(entry.password);
       setUrl(entry.url || []);
@@ -42,11 +44,12 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const now = Date.now();
     const newEntry = {
       id: entry?.id || crypto.randomUUID(),
       title,
+      icon_id: iconId || undefined,
       username,
       password,
       url,
@@ -98,7 +101,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
 
   // 计算密码强度
   const passwordStrength = password ? calculateStrength(password) : null;
-  
+
   // 翻译密码强度标签
   const getLocalizedStrengthLabel = (level: 'weak' | 'medium' | 'strong'): string => {
     switch (level) {
@@ -107,7 +110,7 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
       case 'strong': return t("generator.strength.strong");
     }
   };
-  
+
   // 翻译密码强度建议
   const getLocalizedSuggestions = (suggestions: string[]): string[] => {
     return suggestions.map(suggestion => {
@@ -136,16 +139,28 @@ function PasswordForm({ entry, groups, selectedGroupId, onSave, onCancel }: Pass
         <form onSubmit={handleSubmit} className="password-form">
           <div className="form-group">
             <label htmlFor="title">{t("passwords.entryTitle")} *</label>
-            <input
-              id="title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder={t("passwords.titlePlaceholder")}
-              required
-              autoFocus
-              autoCorrect="off"
-            />
+            <div className="title-input-group">
+              <input
+                type="text"
+                className="icon-input"
+                value={iconId}
+                onChange={(e) => setIconId(e.target.value)}
+                placeholder="🔑"
+                maxLength={2}
+                title={t("passwords.icon")}
+              />
+              <input
+                id="title"
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("passwords.titlePlaceholder")}
+                required
+                autoFocus
+                autoCorrect="off"
+                className="title-input"
+              />
+            </div>
           </div>
 
           {groups.length > 0 && (

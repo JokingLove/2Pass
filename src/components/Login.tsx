@@ -11,6 +11,7 @@ function Login({ onLogin }: LoginProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [unlockingMessage, setUnlockingMessage] = useState("");
 
   useEffect(() => {
     checkMasterPassword();
@@ -42,12 +43,16 @@ function Login({ onLogin }: LoginProps) {
         // 等待数据加载完成
         await onLogin();
       } else {
+        setUnlockingMessage(t("login.unlocking"));
         const valid = await invoke<boolean>("verify_master_password", {
           masterPassword,
         });
+        setUnlockingMessage("");
         if (valid) {
+          setUnlockingMessage(t("login.loadingData"));
           // 等待数据加载完成
           await onLogin();
+          setUnlockingMessage("");
         } else {
           setError(t("login.wrongPassword"));
           setLoading(false);
@@ -96,6 +101,7 @@ function Login({ onLogin }: LoginProps) {
           )}
 
           {error && <div className="error-message">{error}</div>}
+          {unlockingMessage && <div className="unlocking-message">🔓 {unlockingMessage}</div>}
 
           <button type="submit" disabled={loading} className={`login-button ${loading ? 'loading' : ''}`}>
             {loading && <span className="button-spinner"></span>}

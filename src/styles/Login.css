@@ -37,9 +37,9 @@
 .login-box {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 28px;
-  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.2), 
-              0 10px 25px rgba(0, 0, 0, 0.12),
-              inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.2),
+    0 10px 25px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   padding: 60px 52px 52px;
   width: 100%;
   max-width: 460px;
@@ -69,6 +69,7 @@
     opacity: 0;
     transform: translateY(30px) scale(0.96);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -176,10 +177,56 @@
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-6px); }
-  20%, 40%, 60%, 80% { transform: translateX(6px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: translateX(-6px);
+  }
+
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: translateX(6px);
+  }
 }
+
+.unlocking-message {
+  background: #eff6ff;
+  color: #1e40af;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  border: 1px solid #93c5fd;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.1px;
+  line-height: 1.4;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
 
 .login-button {
   padding: 19px;
@@ -275,21 +322,20 @@
   .login-container {
     padding: 20px;
   }
-  
+
   .login-box {
     padding: 44px 32px 36px;
   }
-  
+
   .login-header h1 {
     font-size: 2.25rem;
   }
-  
+
   .login-header p {
     font-size: 1rem;
   }
-  
+
   .form-group input {
     font-size: 1rem;
   }
 }
-

@@ -1,0 +1,4 @@
+# Performance optimization for keepass crate
+# Enables CPU-specific optimizations, especially for AES key derivation
+[build]
+rustflags = ["-C", "target-cpu=native"]

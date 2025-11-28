@@ -13,6 +13,7 @@ export interface PasswordEntry {
   url?: string[];
   notes: string;
   totp_secret?: string; // TOTP secret in base32 format
+  icon_id?: string; // Icon ID or Emoji
   tags?: string[]; // 标签列表
   group_id?: string; // 所属分组ID
   sort_order?: number; // 排序顺序
@@ -43,6 +44,7 @@ export interface PasswordListProps {
   onMoveToGroup?: (entryId: string, groupId: string | null) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;
+  loading?: boolean;
 }
 
 export interface PasswordFormProps {

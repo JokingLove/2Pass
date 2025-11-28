@@ -4,7 +4,7 @@
   height: 100%;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  width: 260px;
+  width: var(--sidebar-width);
   flex-shrink: 0;
 }
 
@@ -12,32 +12,32 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 20px 16px 20px;
+  padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-md) var(--spacing-lg);
   background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
 }
 
 .group-list-header h3 {
   margin: 0;
-  font-size: 17px;
-  font-weight: 800;
+  font-size: var(--text-lg);
+  font-weight: var(--font-extrabold);
   color: var(--text-primary);
-  letter-spacing: 0.5px;
+  letter-spacing: -0.3px;
 }
 
 .add-group-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
   border: none;
   background: var(--primary-color);
   color: white;
-  font-size: 20px;
+  font-size: 18px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-fast);
   line-height: 1;
   box-shadow: var(--shadow);
 }
@@ -51,7 +51,7 @@
 .group-items {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: var(--spacing-sm);
   background: var(--bg-secondary);
   min-height: 0;
 }
@@ -59,14 +59,15 @@
 .group-item {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  margin-bottom: 6px;
-  border-radius: 12px;
+  gap: var(--spacing-md);
+  padding: 10px 12px;
+  margin-bottom: var(--spacing-xs);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: var(--transition-fast);
   user-select: none;
   background: transparent;
+  min-height: 36px;
 }
 
 .group-item:hover {
@@ -111,10 +112,10 @@
 }
 
 .group-icon {
-  font-size: 24px;
+  font-size: 20px;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -123,8 +124,8 @@
 
 .group-name {
   flex: 1;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -139,13 +140,13 @@
 }
 
 .group-count {
-  font-size: 12px;
-  padding: 5px 11px;
-  border-radius: 14px;
+  font-size: var(--text-xs);
+  padding: 4px 9px;
+  border-radius: 12px;
   background: var(--bg-tertiary);
   color: var(--text-secondary);
-  font-weight: 700;
-  min-width: 32px;
+  font-weight: var(--font-bold);
+  min-width: 28px;
   text-align: center;
   font-variant-numeric: tabular-nums;
   line-height: 1;
@@ -155,11 +156,11 @@
   position: fixed;
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
-  padding: 8px;
+  padding: var(--spacing-xs);
   z-index: 1000;
-  min-width: 160px;
+  min-width: 150px;
   backdrop-filter: blur(20px);
   animation: contextMenuIn 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -169,6 +170,7 @@
     opacity: 0;
     transform: scale(0.95) translateY(-4px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -177,19 +179,19 @@
 
 .context-menu button {
   width: 100%;
-  padding: 11px 16px;
+  padding: 8px 12px;
   border: none;
   background: none;
   text-align: left;
   cursor: pointer;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 12px;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  font-weight: 600;
+  gap: var(--spacing-sm);
+  transition: var(--transition-fast);
+  font-weight: var(--font-semibold);
 }
 
 .context-menu button:hover {
