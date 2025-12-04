@@ -15,11 +15,13 @@ sha256sums=()
 prepare() {
     # 复制项目文件到构建目录（排除不必要的大型目录以加快速度）
     if command -v rsync &> /dev/null; then
-        rsync -a --exclude='node_modules' --exclude='target' --exclude='dist' \
+        rsync -a --exclude='node_modules' --exclude='src-tauri/target' \
               --exclude='*.pkg.tar.zst' --exclude='pkg' \
               "${startdir}/" "${srcdir}/"
     else
         cp -r "${startdir}"/* "${srcdir}/"
+        # 如果使用 cp，手动清理大型目录
+        rm -rf "${srcdir}/node_modules" "${srcdir}/src-tauri/target" 2>/dev/null || true
     fi
     
     cd "${srcdir}"
@@ -27,17 +29,31 @@ prepare() {
     # 清理可能存在的 PKGBUILD 相关文件
     rm -f PKGBUILD *.pkg.tar.zst
     
+    # 清理旧的构建产物，确保全新构建
+    rm -rf dist
+    
     # 安装依赖
     pnpm install
 }
 
 build() {
     cd "${srcdir}"
-    # 只构建 Rust 二进制文件，不创建 bundle（AppImage/deb）
-    # 这样可以避免 linuxdeploy 依赖
+    
+    # 先构建前端
     pnpm build
+    
+    # 使用 cargo 构建 Rust 后端
+    # Tauri 会自动从 ../dist 目录嵌入前端资源（根据 tauri.conf.json 中的 frontendDist 配置）
     cd src-tauri
     cargo build --release
+    
+    # 验证二进制文件已创建
+    if [ ! -f "target/release/pass" ]; then
+        echo "Error: Binary file not created!"
+        exit 1
+    fi
+    
+    echo "✅ Build successful: binary created at src-tauri/target/release/pass"
 }
 
 package() {
