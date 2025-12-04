@@ -39,21 +39,29 @@ prepare() {
 build() {
     cd "${srcdir}"
     
-    # 先构建前端
-    pnpm build
+    echo "🚀 Building Tauri application..."
     
-    # 使用 cargo 构建 Rust 后端
-    # Tauri 会自动从 ../dist 目录嵌入前端资源（根据 tauri.conf.json 中的 frontendDist 配置）
-    cd src-tauri
-    cargo build --release
+    # 使用完整的 Tauri 构建流程
+    # 即使 bundle 步骤失败（缺少 linuxdeploy），二进制文件应该已经构建好了
+    pnpm tauri build 2>&1 | tee build.log || {
+        echo "⚠️  Bundle creation may have failed, checking if binary was built..."
+    }
     
-    # 验证二进制文件已创建
-    if [ ! -f "target/release/pass" ]; then
-        echo "Error: Binary file not created!"
+    # 验证二进制文件已创建（这是最关键的）
+    if [ ! -f "src-tauri/target/release/pass" ]; then
+        echo "❌ Error: Binary file 'pass' not created!"
+        echo "Checking what was built:"
+        ls -la src-tauri/target/release/ 2>/dev/null || echo "target/release directory not found"
+        
+        # 显示构建日志的最后几行
+        echo ""
+        echo "Last 50 lines of build log:"
+        tail -n 50 build.log 2>/dev/null || true
         exit 1
     fi
     
-    echo "✅ Build successful: binary created at src-tauri/target/release/pass"
+    echo "✅ Binary built successfully!"
+    ls -lh src-tauri/target/release/pass
 }
 
 package() {
