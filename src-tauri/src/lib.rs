@@ -3,7 +3,7 @@ mod config;
 use config::{AppConfig, ConfigManager};
 use data_encoding::{BASE32, BASE32_NOPAD};
 use kdbx_rs::{
-    binary::{KdfParams, Unlocked, Variant},
+    binary::Unlocked,
     database::{Database, Entry, Field, Group},
     CompositeKey, Kdbx,
 };
@@ -379,23 +379,9 @@ fn create_master_password(
     let key = CompositeKey::from_password(&master_password);
     kdbx.set_key(key).map_err(|e| e.to_string())?;
 
-    // 设置快速 KDF 参数以加速解锁（从默认的6秒减少到1-2秒）
-    // 这是安全性和性能的平衡
-    let header = kdbx.header_mut();
-    let mut salt = vec![0u8; 32];
-    use rand::RngCore;
-    rand::thread_rng().fill_bytes(&mut salt);
-
-    header.kdf = KdfParams::Argon2 {
-        variant: Variant::Argon2d,      // 使用 Argon2d variant
-        memory_bytes: 32 * 1024 * 1024, // 32 MB (默认是 64 MB)
-        iterations: 2,                  // 2次迭代 (默认可能更高)
-        lanes: 2,                       // 2个并行线程
-        version: 0x13,                  // Argon2 version 1.3 (0x13)
-        salt,
-    };
-
-    println!("✅ 使用快速 KDF 配置: 32MB 内存, 2次迭代");
+    // 使用默认 KDF 参数
+    // kdbx-rs 会自动使用合适的默认 Argon2 配置
+    println!("✅ 使用默认 KDF 配置");
 
     // Save to file
     let mut file = File::create(&app_state.data_file)
