@@ -26,7 +26,11 @@ prepare() {
 
 build() {
     cd "${srcdir}"
-    pnpm tauri build
+    # 只构建 Rust 二进制文件，不创建 bundle（AppImage/deb）
+    # 这样可以避免 linuxdeploy 依赖
+    pnpm build
+    cd src-tauri
+    cargo build --release
 }
 
 package() {
