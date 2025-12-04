@@ -4,7 +4,7 @@
 
 **A secure, modern password manager built with Tauri and React**
 
-[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/yourusername/2pass)
+[![Version](https://img.shields.io/badge/version-1.2.2-blue.svg)](https://github.com/yourusername/2pass)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-orange.svg)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -163,14 +163,17 @@ The executable will be located in `src-tauri/target/release/bundle/`.
 
 Download the latest release for your platform:
 
-- **macOS (Apple Silicon)**: `2Pass_1.2.1_aarch64.dmg`
-- **macOS (Intel)**: `2Pass_1.2.1_x64.dmg`
-- **Windows**: `2Pass_1.2.1_x64-setup.exe` or `.msi`
-- **Linux**: `2pass_1.2.1_amd64.deb` or `.AppImage`
+- **macOS (Apple Silicon)**: `2Pass_1.2.2_aarch64.dmg`
+- **macOS (Intel)**: `2Pass_1.2.2_x64.dmg`
+- **Windows**: `2Pass_1.2.2_x64-setup.exe` or `.msi`
+- **Linux (Debian/Ubuntu)**: `2pass_1.2.2_amd64.deb`
+- **Linux (Arch/Universal)**: `2pass_1.2.2_amd64.AppImage`
 
 [Download Latest Release →](https://github.com/yourusername/2pass/releases)
 
 > ⚠️ **macOS Users**: If you see "Cannot verify" error, run: `sudo xattr -rd com.apple.quarantine /Applications/2Pass.app`
+> 
+> 📘 **Arch Linux Users**: See [Arch Linux Installation Guide](INSTALL_ARCHLINUX.md) for detailed instructions
 
 ## ⚠️ Important Notes
 

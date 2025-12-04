@@ -57,7 +57,14 @@ jobs:
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            libwebkit2gtk-4.0-dev \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
 
       - name: Install frontend dependencies
         run: pnpm install
@@ -91,7 +98,8 @@ jobs:
             
             **Linux:**
             - Debian/Ubuntu: `2pass_*_amd64.deb`
-            - AppImage: `2pass_*_amd64.AppImage`
+            - Arch Linux/通用: `2pass_*_amd64.AppImage` (推荐)
+            - 使用方法: `chmod +x 2pass_*_amd64.AppImage && ./2pass_*_amd64.AppImage`
             
             ### ✨ 更新内容 / What's New
             
