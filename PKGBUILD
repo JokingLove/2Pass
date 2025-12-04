@@ -13,8 +13,15 @@ source=()
 sha256sums=()
 
 prepare() {
-    # 复制项目文件到构建目录
-    cp -r "${startdir}"/* "${srcdir}/" 2>/dev/null || true
+    # 复制项目文件到构建目录（排除不必要的大型目录以加快速度）
+    if command -v rsync &> /dev/null; then
+        rsync -a --exclude='node_modules' --exclude='target' --exclude='dist' \
+              --exclude='*.pkg.tar.zst' --exclude='pkg' \
+              "${startdir}/" "${srcdir}/"
+    else
+        cp -r "${startdir}"/* "${srcdir}/"
+    fi
+    
     cd "${srcdir}"
     
     # 清理可能存在的 PKGBUILD 相关文件
@@ -36,8 +43,8 @@ build() {
 package() {
     cd "${srcdir}"
     
-    # Install binary
-    install -Dm755 "src-tauri/target/release/2pass" "${pkgdir}/usr/bin/2pass"
+    # Install binary (注意：Cargo.toml 中的 name 是 "pass"，编译出的二进制文件名是 pass)
+    install -Dm755 "src-tauri/target/release/pass" "${pkgdir}/usr/bin/2pass"
     
     # Install icon
     install -Dm644 "src-tauri/icons/128x128.png" \
