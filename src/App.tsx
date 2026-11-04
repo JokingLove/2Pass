@@ -227,17 +227,9 @@ function App() {
     }
   };
 
-  const handleUpdateOrder = async (updatedEntries: PasswordEntry[]) => {
-    try {
-      // Persist the changed ranks in the vault.
-      for (const entry of updatedEntries) {
-        await invoke("update_entry", { entry });
-      }
-      await loadEntries();
-    } catch (error) {
-      console.error("Failed to update order:", error);
-      toast.error(t("passwords.updateOrderFailed") + "：" + error);
-    }
+  const handleUpdateOrder = async (orderedIds: string[]) => {
+    await invoke("reorder_entries", { orderedIds });
+    await loadEntries();
   };
 
   const handleCancelForm = () => {

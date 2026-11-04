@@ -7,6 +7,7 @@ use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use base64::{engine::general_purpose, Engine as _};
 use data_encoding::{BASE32, BASE32_NOPAD};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -181,6 +182,16 @@ fn write_new_file(path: &Path, contents: &[u8]) -> Result<(), String> {
     Ok(())
 }
 
+fn replace_vault_file(path: &Path, contents: &[u8]) -> Result<(), String> {
+    let pending = path.with_extension(format!("{}.tmp", uuid::Uuid::new_v4()));
+    write_new_file(&pending, contents)?;
+    if let Err(err) = fs::rename(&pending, path) {
+        let _ = fs::remove_file(&pending);
+        return Err(err.to_string());
+    }
+    Ok(())
+}
+
 fn clear_session(app_state: &mut AppState) {
     app_state.encryption_key = None;
     app_state.entries.clear();
@@ -275,6 +286,40 @@ fn get_all_entries(state: tauri::State<Mutex<AppState>>) -> Result<Vec<PasswordE
         return Err("Not authenticated".to_string());
     }
     Ok(app_state.entries.clone())
+}
+
+#[tauri::command]
+fn reorder_entries(
+    ordered_ids: Vec<String>,
+    state: tauri::State<Mutex<AppState>>,
+) -> Result<(), String> {
+    persist_entry_order(&ordered_ids, &mut state.lock().unwrap())
+}
+
+fn persist_entry_order(ordered_ids: &[String], app_state: &mut AppState) -> Result<(), String> {
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
+    if ordered_ids.len() != app_state.entries.len() {
+        return Err("Order must include every entry".to_string());
+    }
+
+    let mut remaining: HashMap<_, _> = app_state.entries.iter()
+        .map(|entry| (entry.id.as_str(), entry))
+        .collect();
+    let mut entries = Vec::with_capacity(ordered_ids.len());
+    for (rank, id) in ordered_ids.iter().enumerate() {
+        let mut entry = remaining.remove(id.as_str())
+            .ok_or("Unknown or duplicate entry in order")?
+            .clone();
+        entry.sort_order = Some(rank as i64);
+        entries.push(entry);
+    }
+    // Use current vault records so an order change cannot revert a newer credential edit.
+    let snapshot = AppData { entries, groups: app_state.groups.clone() };
+    persist_snapshot(app_state, &snapshot)?;
+    app_state.entries = snapshot.entries;
+    Ok(())
 }
 
 #[tauri::command]
@@ -445,14 +490,7 @@ fn rotate_vault_password(
 
     // Finish the replacement on the same filesystem before touching the live vault.
     let contents = serde_json::to_vec(&new_storage_data).map_err(|e| e.to_string())?;
-    let pending = app_state
-        .data_file
-        .with_extension(format!("{}.tmp", uuid::Uuid::new_v4()));
-    write_new_file(&pending, &contents)?;
-    if let Err(err) = fs::rename(&pending, &app_state.data_file) {
-        let _ = fs::remove_file(&pending);
-        return Err(err.to_string());
-    }
+    replace_vault_file(&app_state.data_file, &contents)?;
 
     // 更新内存中的加密密钥
     app_state.encryption_key = Some(new_key);
@@ -460,18 +498,21 @@ fn rotate_vault_password(
     Ok(())
 }
 
-fn save_entries(app_state: &mut AppState) -> Result<(), String> {
+fn save_entries(app_state: &AppState) -> Result<(), String> {
+    let snapshot = AppData {
+        entries: app_state.entries.clone(),
+        groups: app_state.groups.clone(),
+    };
+    persist_snapshot(app_state, &snapshot)
+}
+
+fn persist_snapshot(app_state: &AppState, snapshot: &AppData) -> Result<(), String> {
     let key = app_state
         .encryption_key
         .as_ref()
         .ok_or("No encryption key")?;
 
-    // 保存包含 entries 和 groups 的完整数据
-    let app_data = AppData {
-        entries: app_state.entries.clone(),
-        groups: app_state.groups.clone(),
-    };
-    let data_json = serde_json::to_string(&app_data).unwrap();
+    let data_json = serde_json::to_string(snapshot).map_err(|e| e.to_string())?;
     let (encrypted_data, nonce) = encrypt_data(&data_json, key)?;
 
     let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
@@ -480,13 +521,8 @@ fn save_entries(app_state: &mut AppState) -> Result<(), String> {
     storage_data.encrypted_data = encrypted_data;
     storage_data.nonce = nonce;
 
-    fs::write(
-        &app_state.data_file,
-        serde_json::to_string(&storage_data).unwrap(),
-    )
-    .map_err(|e| e.to_string())?;
-
-    Ok(())
+    let contents = serde_json::to_vec(&storage_data).map_err(|e| e.to_string())?;
+    replace_vault_file(&app_state.data_file, &contents)
 }
 
 #[tauri::command]
@@ -704,6 +740,7 @@ pub fn run() {
             verify_master_password,
             lock_vault,
             get_all_entries,
+            reorder_entries,
             add_entry,
             update_entry,
             delete_entry,
@@ -726,6 +763,59 @@ pub fn run() {
 #[cfg(test)]
 mod vault_session_tests {
     use super::*;
+
+    #[test]
+    fn reordering_is_a_single_encrypted_update_preserving_credentials() {
+        let dir = std::env::temp_dir().join(format!("2pass-order-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&dir).unwrap();
+        let path = dir.join("vault.json");
+        let mut state = AppState {
+            data_file: path.clone(), entries: vec![], groups: vec![], encryption_key: None,
+        };
+        assert!(persist_entry_order(&[], &mut state).is_err());
+        create_vault("test-master-password", &mut state).unwrap();
+        let make_entry = |id: &str| -> PasswordEntry {
+            serde_json::from_value(serde_json::json!({
+                "id": id, "title": id, "username": "updated login", "password": "sample",
+                "notes": "latest notes", "created_at": 10, "updated_at": 20, "group_id": "folder",
+                "icon": "shield", "color": "denim", "history": [{"timestamp": 12, "notes": "old"}]
+            })).unwrap()
+        };
+        state.entries = vec![make_entry("a"), make_entry("b"), make_entry("c")];
+        state.groups.push(serde_json::from_value(serde_json::json!({
+            "id": "folder", "name": "Work", "icon": "W", "sort_order": 0, "created_at": 1
+        })).unwrap());
+        save_entries(&state).unwrap();
+        let original_bytes = fs::read(&path).unwrap();
+        let original_entries = serde_json::to_value(&state.entries).unwrap();
+        for invalid in [vec!["a", "b"], vec!["a", "b", "b"], vec!["a", "c", "missing"]] {
+            let ids: Vec<String> = invalid.into_iter().map(str::to_owned).collect();
+            assert!(persist_entry_order(&ids, &mut state).is_err());
+            assert_eq!(fs::read(&path).unwrap(), original_bytes);
+            assert_eq!(serde_json::to_value(&state.entries).unwrap(), original_entries);
+        }
+
+        let order = ["c", "a", "b"].map(str::to_owned);
+        state.data_file = dir.join("missing").join("vault.json");
+        assert!(persist_entry_order(&order, &mut state).is_err());
+        assert_eq!(serde_json::to_value(&state.entries).unwrap(), original_entries);
+        state.data_file = path.clone();
+        persist_entry_order(&order, &mut state).unwrap();
+        let envelope: StorageData = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        let plaintext = decrypt_data(
+            &envelope.encrypted_data, &envelope.nonce, state.encryption_key.as_ref().unwrap(),
+        ).unwrap();
+        let saved: AppData = serde_json::from_str(&plaintext).unwrap();
+        assert_eq!(serde_json::to_value(&saved.groups).unwrap(), serde_json::to_value(&state.groups).unwrap());
+        assert_eq!(serde_json::to_value(&saved.entries).unwrap(), serde_json::to_value(&state.entries).unwrap());
+        for (rank, id) in order.iter().enumerate() {
+            let mut expected = make_entry(id);
+            expected.sort_order = Some(rank as i64);
+            assert_eq!(serde_json::to_value(&saved.entries[rank]).unwrap(), serde_json::to_value(expected).unwrap());
+        }
+        fs::remove_file(path).unwrap();
+        fs::remove_dir(dir).unwrap();
+    }
 
     #[test]
     fn rotation_and_lock_preserve_both_vault_formats() {

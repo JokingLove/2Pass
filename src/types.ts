@@ -41,7 +41,7 @@ export interface PasswordListProps {
   onEdit: (entry: PasswordEntry) => void;
   onDelete: (id: string) => void;
   onAdd: () => void;
-  onUpdateOrder: (entries: PasswordEntry[]) => void;
+  onUpdateOrder: (orderedIds: string[]) => Promise<void>;
   onMoveToGroup?: (entryId: string, groupId: string | null) => void;
   searchTerm: string;
   onSearchChange: (term: string) => void;

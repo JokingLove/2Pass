@@ -4,7 +4,7 @@
 
 **使用 Tauri 和 React 构建的安全、现代化密码管理器**
 
-[![版本](https://img.shields.io/badge/版本-1.2.1-blue.svg)](https://github.com/yourusername/2pass)
+[![版本](https://img.shields.io/badge/版本-1.2.3-blue.svg)](https://github.com/yourusername/2pass)
 [![许可证](https://img.shields.io/badge/许可证-MIT-green.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-orange.svg)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -23,7 +23,7 @@
 - 🔑 **主密码保护** - 使用 Argon2 哈希算法保护主密码
 - 📝 **完整的 CRUD 操作** - 添加、编辑、删除和查看密码条目
 - 🔍 **实时搜索** - 快速搜索标题、用户名或网址
-- 🎯 **拖动排序** - 在管理模式中调整条目顺序
+- 🎯 **拖动排序** - 在「排序 → 手动拖动」下直接拖动条目左侧手柄。也可按名称、更新或创建时间排序，选择会在重新打开后保留。
 - 🎲 **密码生成器** - 生成强密码，可自定义长度和字符类型
 - ⏱️ **TOTP 支持** - 集成 Google Authenticator，支持二次验证码
 - 🔗 **组合密码** - 在详情中单独复制验证码或组合密码
@@ -161,8 +161,7 @@ pnpm tauri build
 
 下载适合你平台的最新版本：
 
-- **macOS (Apple Silicon)**: `2Pass_1.2.1_aarch64.dmg`
-- **macOS (Intel)**: `2Pass_1.2.1_x64.dmg`
+- **macOS 13.3+ (Apple Silicon / Intel)**: `2Pass_1.2.3_universal.dmg`
 - **Windows**: `2Pass_1.2.1_x64-setup.exe` 或 `.msi`
 - **Linux**: `2pass_1.2.1_amd64.deb` 或 `.AppImage`
 

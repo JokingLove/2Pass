@@ -3,8 +3,10 @@ import {
   defaultCombineFormat, isValidGaSeparator, quickCopyActions,
   type CombineFormat, type QuickCopyAction,
 } from "../utils/quickCopy";
+import { isEntrySort, type EntrySort } from "../utils/entryOrder";
 
 interface ListPreferences {
+  sort: EntrySort;
   actions: QuickCopyAction[];
   showDomain: boolean;
   showGroup: boolean;
@@ -22,6 +24,7 @@ interface StoredDisplay {
 
 const storageKey = "2pass.list-display.v1";
 const defaults: ListPreferences = {
+  sort: "custom",
   actions: ["username", "password", "totp", "combined"],
   showDomain: true, showGroup: true, showUpdated: true, showTags: true, showGaDigits: true,
   combineFormat: defaultCombineFormat,
@@ -43,7 +46,7 @@ function readDisplay(): StoredDisplay {
   try {
     const data = JSON.parse(localStorage.getItem(storageKey) || "{}");
     const prefs = data?.preferences || {};
-    const enabled = (key: Exclude<keyof ListPreferences, "actions" | "combineFormat">) =>
+    const enabled = (key: Exclude<keyof ListPreferences, "actions" | "combineFormat" | "sort">) =>
       typeof prefs[key] === "boolean" ? prefs[key] : defaults[key];
     let actions = cleanActions(prefs.actions, defaults.actions);
     // The original UI saved its two default buttons even if the user never changed them.
@@ -53,6 +56,7 @@ function readDisplay(): StoredDisplay {
     return {
       version: 2,
       preferences: {
+        sort: isEntrySort(prefs.sort) ? prefs.sort : defaults.sort,
         actions, showDomain: enabled("showDomain"), showGroup: enabled("showGroup"),
         showUpdated: enabled("showUpdated"), showTags: enabled("showTags"), showGaDigits: enabled("showGaDigits"),
         combineFormat: validFormat(prefs.combineFormat) ? prefs.combineFormat : defaultCombineFormat,

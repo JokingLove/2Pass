@@ -50,6 +50,20 @@ export async function invoke<T = void>(command: string, args: Record<string, unk
     case "get_all_groups": result = session.groups; break;
     case "add_entry": session.entries.push(structuredClone(entry)); break;
     case "update_entry": session.entries = session.entries.map(e => e.id === entry.id ? structuredClone(entry) : e); break;
+    case "reorder_entries": {
+      const ids = args.orderedIds;
+      const remaining = new Map(session.entries.map(item => [item.id, item]));
+      if (!Array.isArray(ids) || ids.length !== session.entries.length) {
+        throw new Error("Order must include every entry");
+      }
+      session.entries = ids.map((id: unknown, rank: number) => {
+        const item = typeof id === "string" ? remaining.get(id) : undefined;
+        if (!item) throw new Error("Unknown or duplicate entry in order");
+        remaining.delete(item.id);
+        return { ...item, sort_order: rank };
+      });
+      break;
+    }
     case "delete_entry": session.entries = session.entries.filter(e => e.id !== args.id); break;
     case "add_group": session.groups.push(structuredClone(group)); break;
     case "update_group": session.groups = session.groups.map(g => g.id === group.id ? structuredClone(group) : g); break;

@@ -4,7 +4,7 @@
 
 **A secure, modern password manager built with Tauri and React**
 
-[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/yourusername/2pass)
+[![Version](https://img.shields.io/badge/version-1.2.3-blue.svg)](https://github.com/yourusername/2pass)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-orange.svg)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61dafb.svg)](https://react.dev/)
@@ -23,7 +23,7 @@
 - 🔑 **Master Password Protection** - Secured with Argon2 hashing algorithm
 - 📝 **Full CRUD Operations** - Add, edit, delete, and view password entries
 - 🔍 **Real-time Search** - Quickly find passwords by title, username, or URL
-- 🎯 **Drag & Drop Sorting** - Reorder entries in Manage mode
+- 🎯 **Drag & Drop Sorting** - Drag the handle beside a login in **Sort → Manual**. You can also sort by name, last update, or creation date. The app remembers your choice.
 - 🎲 **Password Generator** - Generate strong passwords with customizable options
 - ⏱️ **TOTP Support** - Built-in Google Authenticator for 2FA codes
 - 🔗 **Combined Passwords** - Copy the verification code alone or append it to the password in Details
@@ -161,14 +161,13 @@ Choose a theme on the lock screen or under **Settings → Appearance**. Porcelai
 
 Download the latest release for your platform:
 
-- **macOS (Apple Silicon)**: `2Pass_1.2.1_aarch64.dmg`
-- **macOS (Intel)**: `2Pass_1.2.1_x64.dmg`
+- **macOS 13.3+ (Apple Silicon / Intel)**: `2Pass_1.2.3_universal.dmg`
 - **Windows**: `2Pass_1.2.1_x64-setup.exe` or `.msi`
 - **Linux**: `2pass_1.2.1_amd64.deb` or `.AppImage`
 
 [Download Latest Release →](https://github.com/yourusername/2pass/releases)
 
-> ⚠️ **macOS Users**: If you see "Cannot verify" error, run: `sudo xattr -rd com.apple.quarantine /Applications/2Pass.app`
+For a trusted local build that macOS blocks on first launch, see [Apple’s instructions for opening an app from an unidentified developer](https://support.apple.com/guide/mac-help/mh40616/mac).
 
 ## ⚠️ Important Notes
 

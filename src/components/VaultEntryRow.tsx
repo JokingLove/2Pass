@@ -61,6 +61,7 @@ interface RowProps {
   checked: boolean;
   manage: boolean;
   canSort: boolean;
+  savingOrder: boolean;
   copied: string | null;
   onOpen: () => void;
   onCustomize: () => void;
@@ -70,14 +71,14 @@ interface RowProps {
 
 export default function VaultEntryRow({
   entry, identity, duplicate, group, showGroup, showUpdated, showActions,
-  actions, tags, dateFormat, term, checked, manage, canSort, copied, onOpen, onSelect, onCopy,
+  actions, tags, dateFormat, term, checked, manage, canSort, savingOrder, copied, onOpen, onSelect, onCopy,
   showGaDigits, combineFormat, onCustomize,
 }: RowProps) {
   const { t, i18n } = useTranslation();
   const zh = i18n.language.startsWith("zh");
   const { title, account, domain } = identity;
   const { setNodeRef, setActivatorNodeRef, transform, transition, attributes, listeners, isDragging } = useSortable({
-    id: entry.id, disabled: !canSort,
+    id: entry.id, disabled: !canSort || savingOrder,
   });
   const updated = new Date(entry.updated_at);
   const validDate = Number.isFinite(updated.getTime()) && entry.updated_at > 0;
@@ -90,36 +91,42 @@ export default function VaultEntryRow({
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 2 : undefined }} className={rowClass}>
       {manage && <input className="vault-checkbox" type="checkbox" aria-label={(zh ? "选择 " : "Select ") + rowLabel} checked={checked} onChange={onSelect} />}
-      <button type="button" className="vault-row-main" onClick={manage ? onSelect : onOpen}
-        title={rowLabel}
-        aria-label={(manage ? (zh ? "切换选择 " : "Toggle selection for ") : (zh ? "查看 " : "View ")) + rowLabel}>
-        <ServiceMark entry={entry} />
-        <span className="vault-item-text">
-          <span className="vault-title-line">
-            <strong>{highlightText(title, term)}</strong>
-            {duplicate && <small className="vault-duplicate">{duplicate}</small>}
+      <div className="vault-row-identity">
+        {canSort && (
+          <button type="button" className="vault-icon vault-grip" ref={setActivatorNodeRef} {...attributes} {...listeners}
+            disabled={savingOrder}
+            title={zh ? "拖动调整顺序，或按空格后用方向键移动" : "Drag to reorder, or press Space and use the arrow keys"}
+            aria-label={t("passwords.dragToSort") + " · " + rowLabel}>
+            <Icon name="grip" size={17} />
+          </button>
+        )}
+        <button type="button" className="vault-row-main" onClick={manage ? onSelect : onOpen}
+          title={rowLabel}
+          aria-label={(manage ? (zh ? "切换选择 " : "Toggle selection for ") : (zh ? "查看 " : "View ")) + rowLabel}>
+          <ServiceMark entry={entry} />
+          <span className="vault-item-text">
+            <span className="vault-title-line">
+              <strong>{highlightText(title, term)}</strong>
+              {duplicate && <small className="vault-duplicate">{duplicate}</small>}
+            </span>
+            {(account || domain) && <span className="vault-identifiers">
+              {account && <span className="vault-account">{highlightText(account, term)}</span>}
+              {account && domain && <span aria-hidden="true" className="vault-meta-dot">·</span>}
+              {domain && <span className="vault-domain">{highlightText(domain, term)}</span>}
+            </span>}
+            {tags.length > 0 && <span className="vault-row-tags">
+              {tags.slice(0, 2).map(tag => <IdentityTag key={tag} tag={tag} />)}
+              {tags.length > 2 && <small className="vault-extra-tags" title={tags.slice(2).join(" · ")}>+{tags.length - 2}</small>}
+            </span>}
+            {(groupLabel || (showUpdated && date)) && <span className="vault-mobile-meta">
+              {groupLabel && <span className="vault-mini-group" data-identity-tone={tone}><GroupSymbol value={group!.icon} size={11} />{groupLabel}</span>}
+              {showUpdated && date && <span><Icon name="clock" size={11} />{date}</span>}
+            </span>}
           </span>
-          {(account || domain) && <span className="vault-identifiers">
-            {account && <span className="vault-account">{highlightText(account, term)}</span>}
-            {account && domain && <span aria-hidden="true" className="vault-meta-dot">·</span>}
-            {domain && <span className="vault-domain">{highlightText(domain, term)}</span>}
-          </span>}
-          {tags.length > 0 && <span className="vault-row-tags">
-            {tags.slice(0, 2).map(tag => <IdentityTag key={tag} tag={tag} />)}
-            {tags.length > 2 && <small className="vault-extra-tags" title={tags.slice(2).join(" · ")}>+{tags.length - 2}</small>}
-          </span>}
-          {(groupLabel || (showUpdated && date)) && <span className="vault-mobile-meta">
-            {groupLabel && <span className="vault-mini-group" data-identity-tone={tone}><GroupSymbol value={group!.icon} size={11} />{groupLabel}</span>}
-            {showUpdated && date && <span><Icon name="clock" size={11} />{date}</span>}
-          </span>}
-        </span>
-      </button>
+        </button>
+      </div>
       {showGroup && <div className="vault-row-group">{groupLabel && <span className="vault-group-pill" data-identity-tone={tone} title={groupLabel}><GroupSymbol value={group!.icon} size={12} />{groupLabel}</span>}</div>}
       {showUpdated && <div className="vault-row-date">{date && <time dateTime={updated.toISOString()}>{date}</time>}</div>}
-      {manage && canSort && (
-        <button type="button" className="vault-icon vault-grip" ref={setActivatorNodeRef} {...attributes} {...listeners}
-          title={t("passwords.dragToSort")} aria-label={t("passwords.dragToSort") + " · " + rowLabel}><Icon name="grip" size={17} /></button>
-      )}
       {!manage && showActions && (
         <div className="vault-row-actions" data-count={actions.length} data-caption={zh ? "复制" : "Copy"}>
           {actions.map(action => {
