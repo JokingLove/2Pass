@@ -1,0 +1,42 @@
+.ga-format {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text-primary);
+}
+.ga-format legend { padding: 0; font-size: 13px; font-weight: 600; }
+.ga-format-body, .ga-format-field { display: grid; gap: 7px; min-width: 0; }
+.ga-format-body { margin-top: 7px; gap: 13px; }
+.ga-format-field > span, .ga-custom > span, .ga-preview > span {
+  color: var(--text-secondary); font-size: 12px; font-weight: 500;
+}
+.ga-order { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; border: 1px solid var(--border-light); border-radius: 7px; background: var(--bg-secondary); }
+.ga-order button, .ga-presets button {
+  min-height: 30px; padding: 3px 8px; border: 1px solid transparent;
+  border-radius: 5px; background: transparent; color: var(--text-secondary);
+  font-size: 12px; line-height: 1.4;
+}
+.ga-order button[aria-pressed="true"], .ga-presets button[aria-pressed="true"] {
+  border-color: var(--border-color); color: var(--text-primary); background: var(--bg-primary); box-shadow: var(--shadow-sm);
+}
+.ga-presets { display: flex; gap: 4px; flex-wrap: wrap; }
+.ga-presets button { background: var(--bg-secondary); }
+.ga-custom { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.ga-custom input {
+  flex: 1; min-width: 0; min-height: 33px; padding: 4px 8px; border: 1px solid var(--border-color);
+  background: var(--bg-primary); color: var(--text-primary); border-radius: 5px; font: 13px var(--mono);
+}
+.ga-custom input[aria-invalid="true"] { border-color: var(--danger-color); }
+.ga-format-hint, .ga-error { font-size: 11px; line-height: 1.5; margin: 0; color: var(--text-secondary); }
+.ga-error { color: var(--danger-color); }
+.ga-preview { border: 1px solid var(--border-light); border-radius: 7px; padding: 8px 10px; background: var(--bg-secondary); display: grid; gap: 4px; min-width: 0; }
+.ga-preview code { font: 13px/1.5 var(--mono); color: var(--text-primary); overflow-wrap: anywhere; white-space: pre-wrap; }
+.ga-setup { display: grid; gap: 6px; justify-items: start; color: var(--text-secondary); }
+.ga-setup strong { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 550; color: var(--text-primary); }
+.ga-setup p, .ga-inheritance { color: var(--text-secondary); font-size: 12px; line-height: 1.55; margin: 0; }
+.ga-entry-format { display: grid; gap: 7px; padding-top: 12px; border-top: 1px solid var(--border-light); }
+.ga-config-link { color: var(--primary-color); border: 0; padding: 3px 0; background: transparent; justify-self: start; font-size: 12px; font-weight: 600; }
+.ga-config-link:hover { text-decoration: underline; }
+.ga-display-format summary { cursor: pointer; padding-block: 4px; color: var(--text-primary); font-size: 13px; font-weight: 600; }
+.ga-display-format[open] summary { margin-bottom: 10px; }

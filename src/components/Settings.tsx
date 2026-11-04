@@ -1,7 +1,10 @@
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useTranslation } from "react-i18next";
+import Icon from "./Icon";
+import { appearanceThemes, type ThemeId } from "../utils/appearance";
 import ImportDialog from "./ImportDialog";
+import ToolPage, { ToolDialog, useToolText } from "./ToolPage";
 import "../styles/Settings.css";
 
 interface SettingsProps {
@@ -9,335 +12,140 @@ interface SettingsProps {
   onAutoLockChange: (minutes: number) => void;
   onLock: () => void;
   theme: string;
-  onThemeChange: (theme: string) => void;
+  onThemeChange: (theme: ThemeId) => void;
   onRefresh: () => void;
+  demo?: boolean;
 }
 
-function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeChange, onRefresh }: SettingsProps) {
-  const { t, i18n } = useTranslation();
-  const [showChangeMasterPassword, setShowChangeMasterPassword] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+function ChangePassword({ onClose, onLock }: { onClose: () => void; onLock: () => void }) {
+  const { t } = useTranslation();
+  const label = useToolText();
+  const [oldPassword, setOld] = useState("");
+  const [newPassword, setNew] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  const autoLockOptions = [
-    { value: 0, label: t("settings.autoLockOptions.disabled") },
-    { value: 1, label: t("settings.autoLockOptions.1min") },
-    { value: 5, label: t("settings.autoLockOptions.5min") },
-    { value: 10, label: t("settings.autoLockOptions.10min") },
-    { value: 15, label: t("settings.autoLockOptions.15min") },
-    { value: 30, label: t("settings.autoLockOptions.30min") },
-    { value: 60, label: t("settings.autoLockOptions.1hour") },
-  ];
-
-  const themeOptions = [
-    { value: "default", label: t("settings.themes.default"), preview: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)" },
-    { value: "sky-blue", label: t("settings.themes.skyBlue"), preview: "linear-gradient(135deg, #93c5fd 0%, #7dd3fc 100%)" },
-    { value: "purple-pink", label: t("settings.themes.purplePink"), preview: "linear-gradient(135deg, #c4b5fd 0%, #f9a8d4 100%)" },
-    { value: "turquoise", label: t("settings.themes.turquoise"), preview: "linear-gradient(135deg, #5eead4 0%, #6ee7b7 100%)" },
-    { value: "bulma", label: t("settings.themes.bulma"), preview: "linear-gradient(135deg, #5eead4 0%, #34d399 100%)" },
-    { value: "glass", label: t("settings.themes.glass"), preview: "linear-gradient(135deg, #a5b4fc 0%, #93c5fd 100%)" },
-  ];
-
-  const languageOptions = [
-    { value: "zh-CN", label: t("settings.languages.zh-CN") },
-    { value: "en-US", label: t("settings.languages.en-US") },
-  ];
-
-  const handleExportData = async () => {
-    try {
-      // 导入 Tauri 的文件对话框和文件系统 API
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
-
-      // 获取导出数据
-      const data = await invoke<string>("export_data");
-
-      // 生成默认文件名
-      const defaultFileName = `2pass-backup-${new Date().toISOString().split("T")[0]}.json`;
-
-      // 打开保存对话框
-      const filePath = await save({
-        defaultPath: defaultFileName,
-        filters: [{
-          name: "JSON",
-          extensions: ["json"]
-        }]
-      });
-
-      // 如果用户取消了，filePath 为 null
-      if (!filePath) {
-        return;
-      }
-
-      // 写入文件
-      await writeTextFile(filePath, data);
-
-      alert("✓ " + t("settings.exportData") + " " + t("common.success") + "！" + t("common.info") + "：\n" + filePath);
-    } catch (err) {
-      console.error(t("settings.exportData") + " " + t("common.error") + ":", err);
-      alert(t("settings.exportData") + " " + t("common.error") + "：" + err);
-    }
-  };
-
-  const handleImportSuccess = () => {
-    // 导入成功后的回调，可以刷新数据
-    onRefresh();
-    // alert("✓ 导入成功！请刷新页面查看导入的密码");
-  };
-
-  const handleLanguageChange = (language: string) => {
-    i18n.changeLanguage(language);
-    localStorage.setItem('language', language);
-  };
-
-  const handleChangeMasterPassword = async () => {
+  const [busy, setBusy] = useState(false);
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
     setError("");
-    setSuccess("");
-
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      setError(t("changeMasterPassword.allFieldsRequired"));
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError(t("changeMasterPassword.passwordMismatch"));
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError(t("changeMasterPassword.passwordTooShort"));
-      return;
-    }
-
+    if (newPassword !== confirm) return setError(t("changeMasterPassword.passwordMismatch"));
+    setBusy(true);
     try {
-      await invoke("change_master_password", {
-        oldPassword: oldPassword,
-        newPassword: newPassword,
-      });
-      setSuccess(t("changeMasterPassword.success"));
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setTimeout(() => {
-        setShowChangeMasterPassword(false);
-        onLock();
-      }, 2000);
+      await invoke("change_master_password", { oldPassword, newPassword });
+      onLock();
     } catch (err) {
       setError(String(err));
+      setBusy(false);
     }
   };
   return (
-    <div className="settings-container">
-      <div className="settings-header">
-        <h1>⚙️ {t("settings.title")}</h1>
-      </div>
-
-      <div className="settings-content">
-        <div className="settings-section">
-          <h2>🎨 {t("settings.appearance")}</h2>
-
-          {/* 语言选择  */}
-          <div className="setting-item full-width">
-            <div className="setting-info">
-              <h3>{t("settings.language")}</h3>
-              <p>{t("settings.languageDescription")}</p>
-            </div>
-            <div className="language-selector">
-              {languageOptions.map((option) => (
-                <button
-                  key={option.value}
-                  className={`language-option ${i18n.language === option.value ? "active" : ""}`}
-                  onClick={() => handleLanguageChange(option.value)}
-                >
-                  <span className="language-label">{option.label}</span>
-                  {i18n.language === option.value && <span className="language-check">✓</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 主题选择 */}
-          <div className="setting-item full-width">
-            <div className="setting-info">
-              <h3>{t("settings.theme")}</h3>
-              <p>{t("settings.themeDescription")}</p>
-            </div>
-            <div className="theme-selector">
-              {themeOptions.map((option) => (
-                <button
-                  key={option.value}
-                  className={`theme-option ${theme === option.value ? "active" : ""}`}
-                  onClick={() => onThemeChange(option.value)}
-                >
-                  <div className="theme-preview" style={{ background: option.preview }} />
-                  <span className="theme-label">{option.label}</span>
-                  {theme === option.value && <span className="theme-check">✓</span>}
-                </button>
-              ))}
-            </div>
-          </div>
-
+    <ToolDialog title={t("settings.changeMasterPassword")} onClose={onClose} busy={busy}>
+      <p className="tool-note">{label("更改后，请使用新主密码重新解锁保险库。", "After this change, unlock the vault with your new master password.")}</p>
+      <form onSubmit={submit}>
+        <label className="tool-input-label">{t("changeMasterPassword.currentPassword")}<input type="password" required autoFocus autoComplete="current-password" value={oldPassword} onChange={e => setOld(e.target.value)} /></label>
+        <label className="tool-input-label">{t("changeMasterPassword.newPassword")}<input type="password" required minLength={8} autoComplete="new-password" placeholder={label("至少 8 个字符", "At least 8 characters")} value={newPassword} onChange={e => setNew(e.target.value)} /></label>
+        <label className="tool-input-label">{t("changeMasterPassword.confirmPassword")}<input type="password" required autoComplete="new-password" value={confirm} onChange={e => setConfirm(e.target.value)} /></label>
+        {error && <p role="alert" className="tool-notice">{error}</p>}
+        <div className="tool-dialog-footer">
+          <button className="tool-btn" type="button" disabled={busy} onClick={onClose}>{t("forms.cancel")}</button>
+          <button className="tool-btn tool-accent" disabled={busy} type="submit">{busy ? t("common.loading") : t("changeMasterPassword.confirmChange")}</button>
         </div>
-
-        <div className="settings-section">
-          <h2>🔒 {t("settings.security")}</h2>
-          <div className="setting-item">
-            <div className="setting-info">
-              <h3>{t("settings.masterPassword")}</h3>
-              <p>{t("settings.masterPasswordDescription")}</p>
-            </div>
-            <button
-              className="setting-action-btn"
-              onClick={() => setShowChangeMasterPassword(true)}
-            >
-              {t("settings.changeMasterPassword")}
-            </button>
-          </div>
-
-          <div className="setting-item full-width">
-            <div className="setting-info">
-              <h3>{t("settings.autoLock")}</h3>
-              <p>{t("settings.autoLockDescription")}</p>
-            </div>
-            <div className="time-selector">
-              {autoLockOptions.map((option) => (
-                <button
-                  key={option.value}
-                  className={`time-option ${autoLockTimeout === option.value ? "active" : ""}`}
-                  onClick={() => onAutoLockChange(option.value)}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-
-        <div className="settings-section">
-          <h2>💾 {t("settings.dataManagement")}</h2>
-          <div className="setting-item">
-            <div className="setting-info">
-              <h3>{t("settings.exportData")}</h3>
-              <p>{t("settings.exportDataDescription")}</p>
-            </div>
-            <button className="setting-action-btn" onClick={handleExportData}>
-              📤 {t("settings.export")}
-            </button>
-          </div>
-
-          <div className="setting-item">
-            <div className="setting-info">
-              <h3>{t("settings.importData")}</h3>
-              <p>{t("settings.importDataDescription")}</p>
-            </div>
-            <button
-              className="setting-action-btn"
-              onClick={() => setShowImportDialog(true)}
-            >
-              📥 {t("settings.import")}
-            </button>
-          </div>
-        </div>
-
-        <div className="settings-section danger-section">
-          <h2>⚠️ {t("settings.dangerZone")}</h2>
-          <div className="setting-item">
-            <div className="setting-info">
-              <h3>{t("settings.clearAllData")}</h3>
-              <p>{t("settings.clearAllDataDescription")}</p>
-            </div>
-            <button className="setting-action-btn danger-btn" disabled>
-              {t("settings.clear")}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {showChangeMasterPassword && (
-        <div className="change-password-overlay">
-          <div className="change-password-dialog">
-            <div className="dialog-header">
-              <h2>🔑 {t("changeMasterPassword.title")}</h2>
-              <button
-                onClick={() => {
-                  setShowChangeMasterPassword(false);
-                  setError("");
-                  setSuccess("");
-                  setOldPassword("");
-                  setNewPassword("");
-                  setConfirmPassword("");
-                }}
-                className="close-btn"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="dialog-content">
-              {error && <div className="error-box">{error}</div>}
-              {success && <div className="success-box">{success}</div>}
-
-              <div className="form-group">
-                <label>{t("changeMasterPassword.currentPassword")}</label>
-                <input
-                  type="password"
-                  value={oldPassword}
-                  onChange={(e) => setOldPassword(e.target.value)}
-                  placeholder={t("changeMasterPassword.currentPasswordPlaceholder")}
-                  autoFocus
-                />
-              </div>
-
-              <div className="form-group">
-                <label>{t("changeMasterPassword.newPassword")}</label>
-                <input
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder={t("changeMasterPassword.newPasswordPlaceholder")}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>{t("changeMasterPassword.confirmPassword")}</label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder={t("changeMasterPassword.confirmPasswordPlaceholder")}
-                />
-              </div>
-            </div>
-
-            <div className="dialog-actions">
-              <button
-                onClick={() => setShowChangeMasterPassword(false)}
-                className="cancel-btn"
-              >
-                {t("forms.cancel")}
-              </button>
-              <button onClick={handleChangeMasterPassword} className="confirm-btn">
-                {t("changeMasterPassword.confirmChange")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showImportDialog && (
-        <ImportDialog
-          onClose={() => setShowImportDialog(false)}
-          onSuccess={handleImportSuccess}
-        />
-      )}
-    </div>
+      </form>
+    </ToolDialog>
   );
 }
 
-export default Settings;
-
+export default function Settings({ autoLockTimeout, onAutoLockChange, onLock, theme, onThemeChange, onRefresh, demo = false }: SettingsProps) {
+  const { t, i18n } = useTranslation();
+  const label = useToolText();
+  const [section, setSection] = useState<"appearance" | "security" | "dataManagement">("appearance");
+  const [dialog, setDialog] = useState<"password" | "import" | null>(null);
+  const [notice, setNotice] = useState<{ error?: boolean; text: string }>();
+  const [exporting, setExporting] = useState(false);
+  const desktopOnly = label("演示模式仅供体验。请在桌面应用中管理真实密码和备份。", "This is a demo. Manage real passwords and backups in the desktop app.");
+  const exportData = async () => {
+    if (demo || exporting) return;
+    setExporting(true);
+    setNotice(undefined);
+    try {
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const path = await save({ defaultPath: '2pass-backup-' + new Date().toISOString().slice(0, 10) + '.json', filters: [{ name: "JSON", extensions: ["json"] }] });
+      if (!path) return;
+      const data = await invoke<string>("export_data");
+      const { writeTextFile } = await import("@tauri-apps/plugin-fs");
+      await writeTextFile(path, data);
+      setNotice({ text: label("加密备份已保存。", "Encrypted backup saved.") });
+    } catch (err) {
+      setNotice({ error: true, text: label("导出失败：", "Export failed: ") + String(err) });
+    } finally {
+      setExporting(false);
+    }
+  };
+  return (
+    <ToolPage title={t("settings.title")} code="PREFERENCES">
+      <nav aria-label={t("settings.title")} className="prefs-nav">
+        {(["appearance", "security", "dataManagement"] as const).map(key => (
+          <button type="button" key={key} onClick={() => setSection(key)} aria-current={section === key ? "page" : undefined}>{t("settings." + key)}</button>
+        ))}
+      </nav>
+      <section aria-label={t("settings." + section)} className="prefs-content">
+        {section === "appearance" && <>
+          <h2>{label("界面主题", "Interface theme")}</h2>
+          <div className="prefs-themes">
+            {appearanceThemes.map(option => {
+              const selected = theme === option.id;
+              return (
+                <button
+                  type="button"
+                  key={option.id}
+                  className="prefs-theme"
+                  aria-pressed={selected}
+                  onClick={() => onThemeChange(option.id)}
+                >
+                  <span className="prefs-theme-art" data-theme-preview={option.id} aria-hidden="true">
+                    <span className="prefs-art-rail"><i /><i /><i /></span>
+                    <span className="prefs-art-stack"><i /><i /><i /></span>
+                  </span>
+                  <span className="prefs-theme-name">
+                    {label(option.zh, option.en)}
+                    {selected && <Icon name="check" size={15} />}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="prefs-row"><label htmlFor="prefs-language">{t("settings.language")}</label>
+            <select id="prefs-language" className="tool-select" value={i18n.language} onChange={e => {
+              const language = e.target.value;
+              void i18n.changeLanguage(language);
+              localStorage.setItem("language", language);
+              document.documentElement.lang = language;
+            }}>
+              <option value="zh-CN">简体中文</option><option value="en-US">English</option>
+            </select>
+          </div>
+        </>}
+        {section === "security" && <>
+          <div className="prefs-row"><div><label htmlFor="prefs-lock">{t("settings.autoLock")}</label><p>{label("无操作一段时间后锁定保险库。", "Lock the vault after a period of inactivity.")}</p></div>
+            <select id="prefs-lock" className="tool-select" value={autoLockTimeout} onChange={e => onAutoLockChange(Number(e.target.value))}>
+              {[0,1,5,10,15,30,60].map(n => <option key={n} value={n}>{t("settings.autoLockOptions." + (n === 0 ? "disabled" : n === 60 ? "1hour" : n + "min"))}</option>)}
+            </select>
+          </div>
+          <div className="prefs-row"><div><h2>{t("settings.masterPassword")}</h2><p>{t("settings.masterPasswordDescription")}</p></div>
+            <button className="tool-btn" type="button" disabled={demo} onClick={() => setDialog("password")}><Icon name="key" size={15}/>{t("settings.changeMasterPassword")}</button>
+          </div>
+        </>}
+        {section === "dataManagement" && <>
+          <div className="prefs-row"><div><h2>{t("settings.importData")}</h2><p>{t("settings.importDataDescription")}</p></div>
+            <button className="tool-btn" type="button" disabled={demo} onClick={() => { setNotice(undefined); setDialog("import"); }}><Icon name="download" size={16}/>{t("settings.import")}</button></div>
+          <div className="prefs-row"><div><h2>{t("settings.exportData")}</h2><p>{t("settings.exportDataDescription")}</p></div>
+            <button className="tool-btn" type="button" disabled={demo || exporting} onClick={exportData}><Icon name="upload" size={16}/>{exporting ? t("common.loading") : t("settings.export")}</button></div>
+          {notice && <p className="tool-notice" role={notice.error ? "alert" : "status"}>{notice.text}</p>}
+        </>}
+        {demo && section !== "appearance" && <p className="prefs-demo-note"><Icon name="lock" size={14}/>{desktopOnly}</p>}
+      </section>
+      {dialog === "password" && !demo && <ChangePassword onClose={() => setDialog(null)} onLock={onLock}/>}
+      {dialog === "import" && !demo && <ImportDialog onSuccess={(count: number) => { onRefresh(); setNotice({ text: t("import.successMessage", { count }) }); }} onClose={() => setDialog(null)}/>}
+    </ToolPage>
+  );
+}

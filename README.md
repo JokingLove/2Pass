@@ -11,7 +11,7 @@
 
 [English](README.md) | [简体中文](README_CN.md)
 
-![2Pass Screenshot](https://via.placeholder.com/800x500?text=2Pass+Screenshot)
+![2Pass Screenshot](docs/vault-workspace.png)
 
 </div>
 
@@ -23,15 +23,15 @@
 - 🔑 **Master Password Protection** - Secured with Argon2 hashing algorithm
 - 📝 **Full CRUD Operations** - Add, edit, delete, and view password entries
 - 🔍 **Real-time Search** - Quickly find passwords by title, username, or URL
-- 🎯 **Drag & Drop Sorting** - Freely arrange your password cards
+- 🎯 **Drag & Drop Sorting** - Reorder entries in Manage mode
 - 🎲 **Password Generator** - Generate strong passwords with customizable options
 - ⏱️ **TOTP Support** - Built-in Google Authenticator for 2FA codes
-- 🔗 **Combined Passwords** - Auto-combine password with TOTP code
+- 🔗 **Combined Passwords** - Copy the verification code alone or append it to the password in Details
 - 📋 **One-Click Copy** - Quick copy username, password, or combined password
 - 👁️ **Show/Hide Passwords** - Toggle password visibility
 - 💾 **Local Storage** - All data encrypted and stored locally
 - 🎨 **Modern UI** - Beautiful and intuitive user interface
-- 🌈 **Multiple Themes** - 6 beautiful color themes to choose from
+- 🌈 **Multiple Themes** - Porcelain White, Graphite Black, Black Gold, and Dusty Rose color schemes
 - 📱 **Responsive Design** - Collapsible sidebar with multi-view support
 - 👥 **Group Management** - Organize passwords into custom groups
 
@@ -39,7 +39,7 @@
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v18 or higher recommended)
+- [Node.js](https://nodejs.org/) (20.19+ or 22.12+)
 - [pnpm](https://pnpm.io/) (or npm/yarn)
 - [Rust](https://www.rust-lang.org/) (required by Tauri)
 
@@ -61,6 +61,8 @@ pnpm install
 pnpm tauri dev
 ```
 
+To preview the interface, run `pnpm dev` and open the local URL. The browser uses an in-memory demo that resets on exit or reload and has no access to the desktop vault.
+
 ### Build
 
 ```bash
@@ -79,9 +81,10 @@ The executable will be located in `src-tauri/target/release/bundle/`.
    - ⚠️ Remember it well - it cannot be recovered if lost!
 
 2. **Add Password Entry**
-   - Click "➕ Add Password" button
+   - Choose **New password**
    - Fill in title, username, password, etc.
-   - Use password generator for strong passwords
+   - Choose **Generate password → Use this password** to fill the field
+   - Use **Icon & color** beside the title to choose a glyph or a random muted color. Groups can have a fixed color, and matching tag names share a color throughout the vault.
 
 3. **Manage Passwords**
    - 👁️ View password
@@ -94,14 +97,15 @@ The executable will be located in `src-tauri/target/release/bundle/`.
    - Supports searching by title, username, and URL
 
 5. **Configure TOTP (Optional)**
-   - Click "➕ Add TOTP" when adding/editing
+   - Open **More details** in the editor and select **Add TOTP**
    - Generate or input TOTP secret
    - Scan QR code with Google Authenticator
-   - View real-time verification codes (refreshes every 30s)
+   - Configured rows show the current six-digit GA code. **Password + GA** appends a fresh code to the password when you click copy.
+   - Use **Customize** on a row to change field order and separators for that account. **List display** sets the defaults and controls whether code digits are visible.
 
 6. **Organize with Groups**
    - Create custom groups to organize passwords
-   - Drag and drop passwords between groups
+   - Move a password using the group selector in its details
    - Filter passwords by group
 
 ## 🔐 Security
@@ -149,13 +153,7 @@ The executable will be located in `src-tauri/target/release/bundle/`.
 
 ## 🎨 Themes
 
-2Pass comes with 6 beautiful themes:
-- 🌟 **2Pass Purple** - Default gradient theme
-- ☁️ **Sky Blue** - Calm blue tones
-- 🌌 **Purple Pink** - Dreamy gradient
-- 🌿 **Turquoise** - Fresh green-blue
-- 🍃 **Mint** - Clean mint colors
-- 🪟 **Glass** - Frosted glass effect
+Choose a theme on the lock screen or under **Settings → Appearance**. Porcelain White pairs white with graphite, Graphite Black uses neutral charcoal, Black Gold combines warm black with champagne accents, and Dusty Rose pairs muted pink with wine red. Your choice also applies at the next launch.
 
 ## 📦 Download
 

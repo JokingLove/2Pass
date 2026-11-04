@@ -1,56 +1,15 @@
-import "../styles/ConfirmDialog.css";
+import { useTranslation } from "react-i18next";
+import Modal from "./Modal";
 
 interface ConfirmDialogProps {
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-  type?: "info" | "warning" | "danger" | "success";
-  onConfirm: () => void;
-  onCancel: () => void;
+  title:string; message:string; confirmText?:string; cancelText?:string;
+  type?:"info"|"warning"|"danger"|"success"; onConfirm:()=>void; onCancel:()=>void;
 }
-
-function ConfirmDialog({
-  title,
-  message,
-  confirmText = "确定",
-  cancelText = "取消",
-  type = "info",
-  onConfirm,
-  onCancel,
-}: ConfirmDialogProps) {
-  const getIcon = () => {
-    switch (type) {
-      case "warning":
-        return "⚠️";
-      case "danger":
-        return "🗑️";
-      case "success":
-        return "✅";
-      default:
-        return "ℹ️";
-    }
-  };
-
-  return (
-    <div className="confirm-overlay" onClick={onCancel}>
-      <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>
-        <div className={`confirm-icon ${type}`}>{getIcon()}</div>
-        <h3 className="confirm-title">{title}</h3>
-        <p className="confirm-message">{message}</p>
-        <div className="confirm-actions">
-          {cancelText && (
-            <button onClick={onCancel} className="btn-cancel">
-              {cancelText}
-            </button>
-          )}
-          <button onClick={onConfirm} className={`btn-confirm ${type}`}>
-            {confirmText}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+export default function ConfirmDialog({title,message,confirmText,cancelText,type="info",onConfirm,onCancel}:ConfirmDialogProps) {
+  const {t} = useTranslation();
+  return <Modal narrow title={title} icon={type==="danger" ? "trash" : "info"} danger={type==="danger"} onClose={onCancel}>
+    <div className="vm-fields"><p className="vm-message">{message}</p></div>
+    <div className="vm-actions">{cancelText!=="" && <button className="vm-button" onClick={onCancel}>{cancelText ?? t("forms.cancel")}</button>}
+    <button className={`vm-button ${type==="danger"?"is-danger":"is-primary"}`} onClick={onConfirm}>{confirmText ?? t("forms.confirm")}</button></div>
+  </Modal>;
 }
-
-export default ConfirmDialog;

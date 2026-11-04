@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.pass" parent="Theme.PassBase">
+        <item name="android:windowSplashScreenBackground">@color/launch_surface</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/launch_splash_mark</item>
+    </style>
+</resources>

@@ -1,25 +1,14 @@
-import { useState } from "react";
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-  DragStartEvent,
-  DragOverlay,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { useDroppable } from "@dnd-kit/core";
+import { useCallback, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { PasswordGroup } from "../types";
+import { DndContext, MouseSensor, TouchSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
+import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { PasswordGroup } from "../types";
 import ConfirmDialog from "./ConfirmDialog";
+import FolderActionMenu, { type FolderAction } from "./FolderActionMenu";
+import { identityTone } from "../utils/identityColors";
+import Icon from "./Icon";
+import GroupSymbol from "./GroupSymbol";
 import "../styles/GroupList.css";
 
 interface GroupListProps {
@@ -31,276 +20,141 @@ interface GroupListProps {
   onDeleteGroup: (groupId: string) => void;
   onUpdateGroupOrder: (groups: PasswordGroup[]) => void;
   entryCountByGroup: Record<string, number>;
+  hideAll?: boolean;
 }
 
-// 固定的"全部密码"项
-function AllPasswordsItem({ 
-  isActive, 
-  onClick, 
-  totalCount 
-}: { 
-  isActive: boolean; 
-  onClick: () => void;
-  totalCount: number;
-}) {
-  const { t } = useTranslation();
-  const { setNodeRef, isOver } = useDroppable({
-    id: `group-all`,
-    data: { groupId: null },
-  });
-
-  return (
-    <div
-      ref={setNodeRef}
-      className={`group-item ${isActive ? "active" : ""} ${isOver ? "drop-over" : ""}`}
-      onClick={onClick}
-    >
-      <span className="group-icon">📋</span>
-      <span className="group-name">{t("passwords.allPasswords")}</span>
-      <span className="group-count">{totalCount}</span>
-    </div>
-  );
-}
-
-// 可排序的分组项
-function SortableGroupItem({
-  group,
-  isActive,
-  entryCount,
-  onSelect,
-  onContextMenu,
-}: {
+type OpenMenu = { groupId: string; anchor: HTMLButtonElement; initialFocus: "first" | "last" };
+interface GroupRowProps {
   group: PasswordGroup;
-  isActive: boolean;
-  entryCount: number;
-  onSelect: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setSortableRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ 
-    id: group.id,
-    data: { type: 'group' }
-  });
+  count: number;
+  active: boolean;
+  menuId: string;
+  open: boolean;
+  select: () => void;
+  toggleMenu: (menu: OpenMenu) => void;
+}
 
-  const { setNodeRef: setDroppableRef, isOver } = useDroppable({
-    id: `group-${group.id}`,
-    data: { groupId: group.id },
-  });
-
-  const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition: isDragging ? "none" : (transition || "transform 200ms ease"),
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  // 合并两个 ref
-  const setRefs = (element: HTMLDivElement | null) => {
-    setSortableRef(element);
-    setDroppableRef(element);
-  };
+function GroupRow({ group, count, active, menuId, open, select, toggleMenu }: GroupRowProps) {
+  const { i18n } = useTranslation();
+  const label = (i18n.language.startsWith("zh") ? "管理分组" : "Manage group") + " · " + group.name;
+  const { setNodeRef, setActivatorNodeRef, transform, transition, listeners, isDragging } = useSortable({ id: group.id, disabled: open });
+  const tone = identityTone(group.id, group.color);
+  const rowClass = ["vault-folder-row", active && "is-active", open && "menu-open", isDragging && "is-dragging"].filter(Boolean).join(" ");
 
   return (
-    <div
-      ref={setRefs}
-      style={style}
-      className={`group-item ${isActive ? "active" : ""} ${isOver ? "drop-over" : ""} ${isDragging ? "dragging" : ""}`}
-      onClick={onSelect}
-      onContextMenu={onContextMenu}
-      {...attributes}
-      {...listeners}
-    >
-      <span className="group-icon">{group.icon}</span>
-      <span className="group-name">{group.name}</span>
-      <span className="group-count">{entryCount}</span>
+    <div ref={setNodeRef} className={rowClass} data-identity-tone={tone}
+      style={{ transform: CSS.Transform.toString(transform), transition }}>
+      <button className="vault-folder-select" type="button" aria-current={active ? "page" : undefined}
+        ref={setActivatorNodeRef} {...listeners} onClick={select} title={group.name}>
+        <span className="vault-folder-chip" data-identity-tone={tone}><GroupSymbol value={group.icon} size={15} /></span>
+        <span className="vault-folder-name">{group.name}</span>
+        <small className="vault-folder-count">{count}</small>
+      </button>
+      <button className="vault-folder-more" type="button" aria-haspopup="menu" aria-expanded={open}
+        aria-controls={open ? menuId : undefined} title={label} aria-label={label}
+        onClick={event => toggleMenu({ groupId: group.id, anchor: event.currentTarget, initialFocus: "first" })}
+        onKeyDown={event => {
+          if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+          event.preventDefault();
+          toggleMenu({ groupId: group.id, anchor: event.currentTarget, initialFocus: event.key === "ArrowUp" ? "last" : "first" });
+        }}>
+        <Icon name="more-horizontal" size={16} />
+      </button>
     </div>
   );
 }
 
-function GroupList({
-  groups,
-  selectedGroupId,
-  onSelectGroup,
-  onAddGroup,
-  onEditGroup,
-  onDeleteGroup,
-  onUpdateGroupOrder,
-  entryCountByGroup,
+export default function GroupList({
+  groups, selectedGroupId, onSelectGroup, onAddGroup, onEditGroup, onDeleteGroup, onUpdateGroupOrder, entryCountByGroup, hideAll = false,
 }: GroupListProps) {
-  const { t } = useTranslation();
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
-  
+  const { t, i18n } = useTranslation();
+  const zh = i18n.language.startsWith("zh");
+  const [expanded, setExpanded] = useState(true);
+  const [menu, setMenu] = useState<OpenMenu | null>(null);
+  const [confirm, setConfirm] = useState<PasswordGroup | null>(null);
+  const sectionToggle = useRef<HTMLButtonElement>(null);
+  const listId = useId();
+  const menuId = useId();
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    })
+    useSensor(MouseSensor, { activationConstraint: { distance: 7 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 7 } }),
   );
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    group: PasswordGroup;
-  } | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<{
-    group: PasswordGroup;
-    hasEntries: boolean;
-  } | null>(null);
 
-  const handleContextMenu = (e: React.MouseEvent, group: PasswordGroup) => {
-    e.preventDefault();
-    setContextMenu({ x: e.clientX, y: e.clientY, group });
+  const closeMenu = useCallback((restore: boolean) => {
+    if (restore) menu?.anchor.focus({ preventScroll: true });
+    setMenu(null);
+  }, [menu]);
+  const toggleMenu = (next: OpenMenu) => { if (menu?.groupId === next.groupId) closeMenu(true); else setMenu(next); };
+  const reorder = (from: number, to: number) => {
+    if (from < 0 || to < 0 || to >= groups.length || from === to) return;
+    onUpdateGroupOrder(arrayMove(groups, from, to).map((group, index) => ({ ...group, sort_order: index })));
   };
-
-  const closeContextMenu = () => {
-    setContextMenu(null);
-  };
-
-  const totalCount = Object.values(entryCountByGroup).reduce((a, b) => a + b, 0);
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveGroupId(event.active.id.toString());
-  };
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveGroupId(null);
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    // 只处理分组排序，不处理密码卡片拖到分组
-    if (active.data.current?.type !== 'group') {
-      return;
-    }
-
-    const oldIndex = groups.findIndex((g) => g.id === active.id);
-    const newIndex = groups.findIndex((g) => g.id === over.id);
-
-    if (oldIndex !== -1 && newIndex !== -1) {
-      const reordered = arrayMove(groups, oldIndex, newIndex);
-      const updatedGroups = reordered.map((group, index) => ({
-        ...group,
-        sort_order: index,
-      }));
-      onUpdateGroupOrder(updatedGroups);
+  const index = menu ? groups.findIndex(group => group.id === menu.groupId) : -1;
+  const menuGroup = groups[index];
+  const groupAction = (action: FolderAction) => {
+    if (!menuGroup || !menu) return;
+    const trigger = menu.anchor;
+    closeMenu(true);
+    if (action === "edit") onEditGroup(menuGroup);
+    else if (action === "delete") setConfirm(menuGroup);
+    else {
+      reorder(index, index + (action === "up" ? -1 : 1));
+      requestAnimationFrame(() => { if (document.activeElement === document.body) trigger.focus({ preventScroll: true }); });
     }
   };
-
-  const activeGroup = activeGroupId ? groups.find((g) => g.id === activeGroupId) : null;
+  const hasEntries = !!(confirm && entryCountByGroup[confirm.id]);
+  const deleteOrDismiss = async () => {
+    const target = confirm;
+    setConfirm(null);
+    if (!target || hasEntries) return;
+    await onDeleteGroup(target.id);
+    requestAnimationFrame(() => {
+      if (document.activeElement === document.body) sectionToggle.current?.focus({ preventScroll: true });
+    });
+  };
+  const addGroup = () => { setExpanded(true); onAddGroup(); };
 
   return (
-    <div className="group-list" onClick={closeContextMenu}>
-      <div className="group-list-header">
-        <h3>{t("groups.title")}</h3>
-        <button onClick={onAddGroup} className="add-group-btn" title={t("groups.addGroup")}>
-          +
+    <section className="vault-folders" aria-label={t("groups.title")}>
+      <header className="vault-folders-head">
+        <h2>
+          <button ref={sectionToggle} type="button" className="vault-folders-toggle" aria-expanded={expanded} aria-controls={listId}
+            onClick={() => { setExpanded(!expanded); closeMenu(false); }}>
+            <Icon name="chevron-right" size={12} /><span>{zh ? "我的分组" : "My folders"}</span>
+            <small>{groups.length}</small>
+          </button>
+        </h2>
+        <button type="button" className="vault-folder-add" aria-label={t("groups.addGroup")} title={t("groups.addGroup")} onClick={addGroup}>
+          <Icon name="plus" size={16} />
         </button>
-      </div>
-
-      <div className="group-items">
-        {/* 全部密码 - 固定不可拖动 */}
-        <AllPasswordsItem
-          isActive={selectedGroupId === null}
-          onClick={() => onSelectGroup(null)}
-          totalCount={totalCount}
-        />
-
-        {/* 用户分组 - 可拖动排序 */}
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext items={groups.map((g) => g.id)} strategy={verticalListSortingStrategy}>
-            {groups.map((group) => (
-              <SortableGroupItem
-                key={group.id}
-                group={group}
-                isActive={selectedGroupId === group.id}
-                entryCount={entryCountByGroup[group.id] || 0}
-                onSelect={() => onSelectGroup(group.id)}
-                onContextMenu={(e) => handleContextMenu(e, group)}
-              />
-            ))}
-          </SortableContext>
-          <DragOverlay dropAnimation={null}>
-            {activeGroupId && activeGroup ? (
-              <div className="group-item" style={{ cursor: 'grabbing', opacity: 0.9 }}>
-                <span className="group-icon">{activeGroup.icon}</span>
-                <span className="group-name">{activeGroup.name}</span>
-                <span className="group-count">{entryCountByGroup[activeGroup.id] || 0}</span>
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      </div>
-
-      {/* 右键菜单 */}
-      {contextMenu && (
-        <div
-          className="context-menu"
-          style={{ top: contextMenu.y, left: contextMenu.x }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => {
-              onEditGroup(contextMenu.group);
-              closeContextMenu();
-            }}
-          >
-            ✏️ {t("forms.edit")}
+      </header>
+      <div id={listId} className="vault-folder-list" hidden={!expanded}>
+        {!hideAll && <div className={"vault-folder-row" + (!selectedGroupId ? " is-active" : "")}>
+          <button type="button" className="vault-folder-select" onClick={() => onSelectGroup(null)} aria-current={!selectedGroupId ? "page" : undefined}>
+            <span className="vault-folder-chip"><Icon name="vault" size={15} /></span>
+            <span className="vault-folder-name">{t("passwords.allPasswords")}</span>
+            <small className="vault-folder-count">{Object.values(entryCountByGroup).reduce((a, n) => a + n, 0)}</small>
           </button>
-          <button
-            onClick={() => {
-              const count = entryCountByGroup[contextMenu.group.id] || 0;
-              setConfirmDelete({
-                group: contextMenu.group,
-                hasEntries: count > 0,
-              });
-              closeContextMenu();
-            }}
-            className="danger"
-          >
-            🗑️ {t("forms.delete")}
-          </button>
-        </div>
-      )}
-
-      {/* 删除确认对话框 */}
-      {confirmDelete && confirmDelete.hasEntries ? (
-        <ConfirmDialog
-          title={t("groups.cannotDeleteGroup")}
-          message={`${t("groups.groupHasPasswords", { groupName: confirmDelete.group.name, count: entryCountByGroup[confirmDelete.group.id] })}`}
-          type="warning"
-          confirmText={t("common.understood")}
-          cancelText=""
-          onConfirm={() => setConfirmDelete(null)}
-          onCancel={() => setConfirmDelete(null)}
-        />
-      ) : confirmDelete ? (
-        <ConfirmDialog
-          title={t("groups.deleteGroup")}
-          message={`${t("groups.confirmDeleteGroup", { groupName: confirmDelete.group.name })}`}
-          type="danger"
-          confirmText={t("forms.delete")}
-          cancelText={t("forms.cancel")}
-          onConfirm={() => {
-            onDeleteGroup(confirmDelete.group.id);
-            setConfirmDelete(null);
-          }}
-          onCancel={() => setConfirmDelete(null)}
-        />
-      ) : null}
-    </div>
+        </div>}
+        {!groups.length ? <button className="vault-folder-new" onClick={addGroup}><Icon name="folder" size={15} />{zh ? "创建第一个分组" : "Create a folder"}</button> : (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={({ active, over }) => {
+            if (over) reorder(groups.findIndex(g => g.id === active.id), groups.findIndex(g => g.id === over.id));
+          }}>
+            <SortableContext items={groups.map(group => group.id)} strategy={verticalListSortingStrategy}>
+              {groups.map(group => <GroupRow key={group.id} group={group} count={entryCountByGroup[group.id] || 0}
+                active={selectedGroupId === group.id} open={menu?.groupId === group.id} menuId={menuId}
+                select={() => onSelectGroup(group.id)} toggleMenu={toggleMenu} />)}
+            </SortableContext>
+          </DndContext>
+        )}
+      </div>
+      {expanded && menu && menuGroup && <FolderActionMenu id={menuId} groupName={menuGroup.name} anchor={menu.anchor}
+        initialFocus={menu.initialFocus} first={index === 0} last={index === groups.length - 1}
+        onAction={groupAction} onDismiss={closeMenu} />}
+      {confirm && <ConfirmDialog title={t(hasEntries ? "groups.cannotDeleteGroup" : "groups.deleteGroup")}
+        message={t(hasEntries ? "groups.groupHasPasswords" : "groups.confirmDeleteGroup", { groupName: confirm.name, count: entryCountByGroup[confirm.id] })}
+        type={hasEntries ? "warning" : "danger"} confirmText={t(hasEntries ? "common.understood" : "forms.delete")}
+        cancelText={hasEntries ? "" : t("forms.cancel")} onConfirm={deleteOrDismiss} onCancel={() => setConfirm(null)} />}
+    </section>
   );
 }
-
-export default GroupList;

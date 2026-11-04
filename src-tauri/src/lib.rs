@@ -8,7 +8,8 @@ use base64::{engine::general_purpose, Engine as _};
 use data_encoding::{BASE32, BASE32_NOPAD};
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::path::PathBuf;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::Manager;
@@ -25,6 +26,10 @@ pub struct PasswordHistory {
 pub struct PasswordEntry {
     pub id: String,
     pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
     pub username: String,
     pub password: String,
     pub url: Option<Vec<String>>,
@@ -159,11 +164,43 @@ fn check_master_password_exists(state: tauri::State<Mutex<AppState>>) -> bool {
     app_state.data_file.exists()
 }
 
+fn write_new_file(path: &Path, contents: &[u8]) -> Result<(), String> {
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(path).map_err(|err| err.to_string())?;
+    if let Err(err) = file.write_all(contents).and_then(|_| file.sync_all()) {
+        drop(file);
+        let _ = fs::remove_file(path);
+        return Err(err.to_string());
+    }
+    Ok(())
+}
+
+fn clear_session(app_state: &mut AppState) {
+    app_state.encryption_key = None;
+    app_state.entries.clear();
+    app_state.groups.clear();
+}
+
+#[tauri::command]
+fn lock_vault(state: tauri::State<Mutex<AppState>>) {
+    clear_session(&mut state.lock().unwrap());
+}
+
 #[tauri::command]
 fn create_master_password(
     master_password: String,
     state: tauri::State<Mutex<AppState>>,
 ) -> Result<(), String> {
+    create_vault(&master_password, &mut state.lock().unwrap())
+}
+
+fn create_vault(master_password: &str, app_state: &mut AppState) -> Result<(), String> {
     let argon2 = Argon2::default();
     let salt = SaltString::generate(&mut OsRng);
     let password_hash = argon2
@@ -171,7 +208,7 @@ fn create_master_password(
         .map_err(|e| e.to_string())?
         .to_string();
 
-    let key = derive_key(&master_password);
+    let key = derive_key(master_password);
     let empty_entries = serde_json::to_string(&Vec::<PasswordEntry>::new()).unwrap();
     let (encrypted_data, nonce) = encrypt_data(&empty_entries, &key)?;
 
@@ -181,15 +218,12 @@ fn create_master_password(
         nonce,
     };
 
-    let mut app_state = state.lock().unwrap();
-    fs::write(
-        &app_state.data_file,
-        serde_json::to_string(&storage_data).unwrap(),
-    )
-    .map_err(|e| e.to_string())?;
+    let contents = serde_json::to_vec(&storage_data).map_err(|e| e.to_string())?;
+    write_new_file(&app_state.data_file, &contents)?;
 
     app_state.encryption_key = Some(key);
-    app_state.entries = Vec::new();
+    app_state.entries.clear();
+    app_state.groups.clear();
 
     Ok(())
 }
@@ -358,7 +392,17 @@ fn change_master_password(
     new_password: String,
     state: tauri::State<Mutex<AppState>>,
 ) -> Result<(), String> {
-    let mut app_state = state.lock().unwrap();
+    rotate_vault_password(&old_password, &new_password, &mut state.lock().unwrap())
+}
+
+fn rotate_vault_password(
+    old_password: &str,
+    new_password: &str,
+    app_state: &mut AppState,
+) -> Result<(), String> {
+    if app_state.encryption_key.is_none() {
+        return Err("Not authenticated".to_string());
+    }
 
     // 读取当前存储数据
     let data = fs::read_to_string(&app_state.data_file).map_err(|e| e.to_string())?;
@@ -377,9 +421,8 @@ fn change_master_password(
     }
 
     // 用旧密码解密当前数据
-    let old_key = derive_key(&old_password);
+    let old_key = derive_key(old_password);
     let decrypted = decrypt_data(&storage_data.encrypted_data, &storage_data.nonce, &old_key)?;
-    let entries: Vec<PasswordEntry> = serde_json::from_str(&decrypted).unwrap_or_default();
 
     // 生成新密码的哈希
     let salt = SaltString::generate(&mut OsRng);
@@ -389,9 +432,9 @@ fn change_master_password(
         .to_string();
 
     // 用新密码重新加密数据
-    let new_key = derive_key(&new_password);
-    let entries_json = serde_json::to_string(&entries).unwrap();
-    let (encrypted_data, nonce) = encrypt_data(&entries_json, &new_key)?;
+    let new_key = derive_key(new_password);
+    // Preserve both the legacy array and the current { entries, groups } payload.
+    let (encrypted_data, nonce) = encrypt_data(&decrypted, &new_key)?;
 
     // 保存新的数据
     let new_storage_data = StorageData {
@@ -400,15 +443,19 @@ fn change_master_password(
         nonce,
     };
 
-    fs::write(
-        &app_state.data_file,
-        serde_json::to_string(&new_storage_data).unwrap(),
-    )
-    .map_err(|e| e.to_string())?;
+    // Finish the replacement on the same filesystem before touching the live vault.
+    let contents = serde_json::to_vec(&new_storage_data).map_err(|e| e.to_string())?;
+    let pending = app_state
+        .data_file
+        .with_extension(format!("{}.tmp", uuid::Uuid::new_v4()));
+    write_new_file(&pending, &contents)?;
+    if let Err(err) = fs::rename(&pending, &app_state.data_file) {
+        let _ = fs::remove_file(&pending);
+        return Err(err.to_string());
+    }
 
     // 更新内存中的加密密钥
     app_state.encryption_key = Some(new_key);
-    app_state.entries = entries;
 
     Ok(())
 }
@@ -444,47 +491,17 @@ fn save_entries(app_state: &mut AppState) -> Result<(), String> {
 
 #[tauri::command]
 fn generate_totp(secret: String) -> Result<String, String> {
-    // Remove any whitespace and padding characters, convert to uppercase
-    let clean_secret = secret.replace(" ", "").replace("=", "").to_uppercase();
-
-    // Validate Base32 characters
-    for (i, c) in clean_secret.chars().enumerate() {
-        if !c.is_ascii_uppercase() && !('2'..='7').contains(&c) {
-            return Err(format!(
-                "Invalid character '{}' at position {}. Base32 only allows A-Z and 2-7. Your secret: '{}'",
-                c, i, clean_secret
-            ));
-        }
-    }
-
-    // Try to decode base32 secret
-    // First try without padding (most common for TOTP)
+    let clean: String = secret
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != '=')
+        .map(|c| c.to_ascii_uppercase())
+        .collect();
     let secret_bytes = BASE32_NOPAD
-        .decode(clean_secret.as_bytes())
-        .or_else(|e1| {
-            println!("NOPAD decode failed: {:?}", e1);
-            // If that fails, try adding padding
-            let padded = add_base32_padding(&clean_secret);
-            println!("Trying with padding: {:?}", padded);
-            BASE32.decode(padded.as_bytes()).map_err(|e2| {
-                format!(
-                    "Both decode attempts failed. NOPAD: {:?}, PADDED: {:?}",
-                    e1, e2
-                )
-            })
-        })
-        .map_err(|e| {
-            format!(
-                "Invalid TOTP secret format: {}. Secret must be Base32 encoded (A-Z, 2-7).",
-                e
-            )
-        })?;
-
+        .decode(clean.as_bytes())
+        .map_err(|_| "Invalid Base32 verification key".to_string())?;
     if secret_bytes.is_empty() {
-        return Err("TOTP secret is empty".to_string());
+        return Err("Empty verification key".to_string());
     }
-
-    println!("Successfully decoded {} bytes", secret_bytes.len());
 
     // Get current timestamp
     let timestamp = SystemTime::now()
@@ -496,17 +513,6 @@ fn generate_totp(secret: String) -> Result<String, String> {
     let totp = totp_lite::totp_custom::<totp_lite::Sha1>(30, 6, &secret_bytes, timestamp);
 
     Ok(format!("{:06}", totp))
-}
-
-// Helper function to add Base32 padding if needed
-fn add_base32_padding(s: &str) -> String {
-    let remainder = s.len() % 8;
-    if remainder == 0 {
-        s.to_string()
-    } else {
-        let padding_needed = 8 - remainder;
-        format!("{}{}", s, "=".repeat(padding_needed))
-    }
 }
 
 #[tauri::command]
@@ -585,6 +591,8 @@ fn import_chrome_csv(
         let entry = PasswordEntry {
             id: uuid::Uuid::new_v4().to_string(),
             title: chrome_entry.name,
+            icon: None,
+            color: None,
             username: chrome_entry.username,
             password: chrome_entry.password,
             url: Some(vec![chrome_entry.url]),
@@ -694,6 +702,7 @@ pub fn run() {
             check_master_password_exists,
             create_master_password,
             verify_master_password,
+            lock_vault,
             get_all_entries,
             add_entry,
             update_entry,
@@ -712,4 +721,66 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod vault_session_tests {
+    use super::*;
+
+    #[test]
+    fn rotation_and_lock_preserve_both_vault_formats() {
+        let dir = std::env::temp_dir().join(format!("2pass-test-{}", uuid::Uuid::new_v4()));
+        fs::create_dir(&dir).unwrap();
+        let path = dir.join("vault.json");
+        let entry = r#"{"id":"sample","title":"Example","username":"sample","password":"demo","notes":"","created_at":1,"updated_at":1,"group_id":"work"}"#;
+        let group = r#"{"id":"work","name":"Work","icon":"W","sort_order":0,"created_at":1}"#;
+        let legacy = format!("[{entry}]");
+        let current = format!(r#"{{"entries":[{entry}],"groups":[{group}]}}"#);
+        for payload in [legacy, current] {
+            let mut state = AppState {
+                data_file: path.clone(),
+                entries: Vec::new(),
+                groups: Vec::new(),
+                encryption_key: None,
+            };
+            create_vault("old-sample", &mut state).unwrap();
+            let mut envelope: StorageData =
+                serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            let original_key = state.encryption_key.as_deref().unwrap();
+            (envelope.encrypted_data, envelope.nonce) =
+                encrypt_data(&payload, original_key).unwrap();
+            let original = serde_json::to_vec(&envelope).unwrap();
+            fs::write(&path, &original).unwrap();
+
+            assert!(create_vault("another-sample", &mut state).is_err());
+            assert!(rotate_vault_password("incorrect", "new-sample", &mut state).is_err());
+            assert_eq!(fs::read(&path).unwrap(), original);
+            state.entries.push(serde_json::from_str(entry).unwrap());
+            state.groups.push(serde_json::from_str(group).unwrap());
+            rotate_vault_password("old-sample", "new-sample", &mut state).unwrap();
+            let envelope: StorageData = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            let key = derive_key("new-sample");
+            assert_eq!(state.encryption_key.as_deref(), Some(key.as_slice()));
+            assert_eq!(
+                decrypt_data(&envelope.encrypted_data, &envelope.nonce, &key).unwrap(),
+                payload
+            );
+            Argon2::default()
+                .verify_password(
+                    b"new-sample",
+                    &PasswordHash::new(&envelope.master_password_hash).unwrap(),
+                )
+                .unwrap();
+
+            clear_session(&mut state);
+            assert!(
+                state.encryption_key.is_none()
+                    && state.entries.is_empty()
+                    && state.groups.is_empty()
+            );
+            assert!(rotate_vault_password("new-sample", "locked-sample", &mut state).is_err());
+            fs::remove_file(&path).unwrap();
+        }
+        fs::remove_dir(dir).unwrap();
+    }
 }

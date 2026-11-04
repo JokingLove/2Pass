@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import Icon from "./Icon";
 import "../styles/Toast.css";
 
 export interface ToastProps {
@@ -10,6 +12,7 @@ export interface ToastProps {
 }
 
 function Toast({ id, message, type = "info", duration = 3000, onClose }: ToastProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
@@ -19,25 +22,12 @@ function Toast({ id, message, type = "info", duration = 3000, onClose }: ToastPr
     }
   }, [id, duration, onClose]);
 
-  const getIcon = () => {
-    switch (type) {
-      case "success":
-        return "✓";
-      case "warning":
-        return "⚠";
-      case "error":
-        return "✕";
-      default:
-        return "ℹ";
-    }
-  };
-
   return (
-    <div className={`toast toast-${type}`}>
-      <div className="toast-icon">{getIcon()}</div>
+    <div className={`toast toast-${type}`} role={type === "error" ? "alert" : "status"}>
+      <div className="toast-icon"><Icon name={type === "success" ? "check" : "info"} size={14}/></div>
       <div className="toast-message">{message}</div>
-      <button className="toast-close" onClick={() => onClose(id)}>
-        ✕
+      <button aria-label={t("forms.close")} className="toast-close" onClick={() => onClose(id)}>
+        <Icon name="x" size={14}/>
       </button>
     </div>
   );

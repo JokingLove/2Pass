@@ -1,156 +1,59 @@
-import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
+import { invoke } from "../utils/commands";
 import { useTranslation } from "react-i18next";
 import { useCopy } from "../hooks/useCopy";
+import { useGaCode } from "../hooks/useGaCode";
+import { defaultCombineFormat, formatCombined, getQuickCopyLabel, type CombineFormat } from "../utils/quickCopy";
+import Icon from "./Icon";
 import "../styles/TotpDisplay.css";
 
 interface TotpDisplayProps {
   secret: string;
-  password: string; // 添加密码参数以显示组合密码
+  password: string;
+  combineFormat?: CombineFormat;
+  onConfigureGa?: () => void;
+  onChooseFormat?: () => void;
   onCopy?: (code: string) => void;
 }
 
-function TotpDisplay({ secret, password, onCopy }: TotpDisplayProps) {
-  const { t } = useTranslation();
+export default function TotpDisplay({ secret, password, onCopy, combineFormat = defaultCombineFormat, onConfigureGa, onChooseFormat }: TotpDisplayProps) {
+  const { t, i18n } = useTranslation();
+  const zh = i18n.language.startsWith("zh");
   const { copyToClipboard, isCopied } = useCopy();
-  const [code, setCode] = useState("------");
-  const [timeLeft, setTimeLeft] = useState(30);
-  const [error, setError] = useState<string | null>(null);
+  const { code, error, secondsLeft: left } = useGaCode(secret);
+  const [copyError, setCopyError] = useState(false);
   const [showCombined, setShowCombined] = useState(false);
-
-  useEffect(() => {
-    const generateCode = async () => {
-      try {
-        const newCode = await invoke<string>("generate_totp", { secret });
-        setCode(newCode);
-        setError(null);
-      } catch (err) {
-        console.error("Failed to generate TOTP:", err);
-        setCode("ERROR");
-        setError(String(err));
-      }
-    };
-
-    // Generate code immediately
-    generateCode();
-
-    // Calculate time until next 30-second interval
-    const now = Math.floor(Date.now() / 1000);
-    const secondsInPeriod = now % 30;
-    const initialTimeLeft = 30 - secondsInPeriod;
-    setTimeLeft(initialTimeLeft);
-
-    // Set up interval to generate new code every 30 seconds
-    const codeInterval = setInterval(generateCode, 30000);
-
-    // Set up interval to update countdown every second
-    const countdownInterval = setInterval(() => {
-      const currentTime = Math.floor(Date.now() / 1000);
-      const remaining = 30 - (currentTime % 30);
-      setTimeLeft(remaining);
-    }, 1000);
-
-    return () => {
-      clearInterval(codeInterval);
-      clearInterval(countdownInterval);
-    };
-  }, [secret]);
-
-  const handleCopy = async () => {
+  const copy = async (combined: boolean) => {
+    setCopyError(false);
     try {
-      await copyToClipboard(code, "totp-code");
-      onCopy?.(code);
-    } catch (error) {
-      console.error(t("totp.copyFailed") + ":", error);
-    }
+      const fresh = await invoke<string>("generate_totp", { secret });
+      const value = combined ? formatCombined(password, fresh, combineFormat) : fresh;
+      await copyToClipboard(value, combined ? "combined" : "otp");
+      if (!combined) onCopy?.(fresh);
+    } catch { setCopyError(true); }
   };
-
-  const handleCopyCombined = async () => {
-    try {
-      const combinedPassword = password + code;
-      await copyToClipboard(combinedPassword, "totp-combined");
-    } catch (error) {
-      console.error(t("totp.copyCombinedFailed") + ":", error);
-    }
-  };
-
-  const getProgressColor = () => {
-    if (timeLeft > 20) return "#00aa00";
-    if (timeLeft > 10) return "#ffaa00";
-    return "#ff4444";
-  };
-
-  const progressPercentage = (timeLeft / 30) * 100;
-  const combinedPassword = password + code;
-
-  if (error) {
-    return (
-      <div className="totp-display totp-error">
-        <div className="error-icon">⚠️</div>
-        <div className="error-message">
-          <strong>{t("totp.configError")}</strong>
-          <p>{error}</p>
-          <small>{t("totp.configErrorHint")}</small>
-        </div>
+  const comboLabel = getQuickCopyLabel("combined", zh, combineFormat);
+  const copyCombo = zh ? `复制${comboLabel}` : `Copy ${comboLabel}`;
+  const revealCombo = showCombined ? (zh ? "隐藏拼接结果" : "Hide combined value") : (zh ? "查看拼接结果" : "Reveal combined value");
+  return <section className="v-otp">
+    <div className="v-otp-head"><span><Icon name="shield" size={15} />{zh ? "GA 验证码" : "GA code"}</span><div className="v-otp-utilities">
+      {onConfigureGa && <button type="button" className="ga-config-link" onClick={onConfigureGa}>{zh ? "管理" : "Manage"}</button>}
+      {!error && <small>{left}s</small>}</div></div>
+    {error ? <p role="alert">{t("totp.configErrorHint")}</p> : <>
+      <div className="v-otp-code">
+        <code>{code ? code.slice(0, 3) + " " + code.slice(3) : "••• •••"}</code>
+        <button className="vault-icon" type="button" disabled={!code} aria-label={t("totp.copyCodeOnly")} title={t("totp.copyCodeOnly")} onClick={() => copy(false)}><Icon name={isCopied("otp") ? "check" : "copy"} size={16} /></button>
       </div>
-    );
-  }
-
-  return (
-    <div className="totp-display">
-      <div className="totp-section-header">
-        <span className="section-label">{t("totp.title")}</span>
-      </div>
-      
-      <div className="totp-code-container">
-        <span className="totp-code">{code}</span>
-        <button
-          onClick={handleCopy}
-          className={`totp-copy-btn ${isCopied("totp-code") ? "copied" : ""}`}
-          title={t("totp.copyCodeOnly")}
-        >
-          {isCopied("totp-code") ? "✓" : "📋"}
-        </button>
-      </div>
-      
-      <div className="totp-timer">
-        <div
-          className="timer-progress"
-          style={{
-            width: `${progressPercentage}%`,
-            backgroundColor: getProgressColor(),
-          }}
-        />
-        <span className="timer-text">{timeLeft}s</span>
-      </div>
-
-      <div className="combined-password-preview">
-        <div className="combined-label">🔗 {t("totp.combinedPassword")}</div>
-        <div className="combined-password-row">
-          <code className="combined-code">
-            {showCombined ? combinedPassword : "••••••••••••••"}
-          </code>
-          <div className="combined-actions">
-            <button
-              onClick={() => setShowCombined(!showCombined)}
-              className="combined-action-btn"
-              title={showCombined ? t("passwords.hidePassword") : t("passwords.showPassword")}
-            >
-              {showCombined ? "🙈" : "👁️"}
-            </button>
-            <button
-              onClick={handleCopyCombined}
-              className={`combined-action-btn ${isCopied("totp-combined") ? "copied" : ""}`}
-              title={t("totp.copyCombined")}
-            >
-              {isCopied("totp-combined") ? "✓" : "📋"}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+      <div className="v-otp-time"><span style={{ width: left / 30 * 100 + "%" }} /></div>
+      {password && <div className="v-otp-combined">
+        <span>{comboLabel}</span>
+        {onChooseFormat && <button className="ga-config-link" type="button" onClick={onChooseFormat}>{zh ? "拼接格式" : "Format"}</button>}
+        <button className="vault-icon" type="button" disabled={!code} aria-label={revealCombo} title={revealCombo} aria-pressed={showCombined} onClick={() => setShowCombined(!showCombined)}><Icon name={showCombined ? "eye-off" : "eye"} size={15} /></button>
+        <button className="vault-icon" type="button" disabled={!code} aria-label={copyCombo} title={copyCombo} onClick={() => copy(true)}><Icon name={isCopied("combined") ? "check" : "copy"} size={15} /></button>
+      </div>}
+      {password && code && showCombined && <code className="v-otp-secret">{formatCombined(password, code, combineFormat)}</code>}
+      {copyError && <p role="alert">{zh ? "未能复制，请重试。" : "Couldn’t copy. Try again."}</p>}
+    </>}
+    <span className="vault-sr" role="status">{isCopied("combined") || isCopied("otp") ? t("generator.passwordCopied") : ""}</span>
+  </section>;
 }
-
-export default TotpDisplay;
-

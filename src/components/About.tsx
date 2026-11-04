@@ -1,80 +1,30 @@
-import { useState, useEffect } from "react";
-import { getVersion } from "@tauri-apps/api/app";
 import { useTranslation } from "react-i18next";
+import { version } from "../../package.json";
+import Icon from "./Icon";
+import VaultMark from "./VaultMark";
+import ToolPage, { useToolText } from "./ToolPage";
 import "../styles/About.css";
 
-function About() {
+export default function About() {
   const { t } = useTranslation();
-  const [version, setVersion] = useState(t("about.loading"));
-
-  useEffect(() => {
-    getVersion().then(setVersion).catch(() => setVersion(t("about.unknown")));
-  }, [t]);
-
+  const label = useToolText();
   return (
-    <div className="about-container">
-      <div className="about-header">
-        <div className="about-logo">🔐</div>
-        <h1>{t("about.title")}</h1>
-        <p className="version">{t("about.version")} {version}</p>
-      </div>
-
-      <div className="about-content">
-        <div className="feature-grid">
-          <div className="feature-card">
-            <div className="feature-icon">🔒</div>
-            <h3>{t("about.features.encryption")}</h3>
-            <p>{t("about.features.encryptionDesc")}</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">🔑</div>
-            <h3>{t("about.features.keyDerivation")}</h3>
-            <p>{t("about.features.keyDerivationDesc")}</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">⏱️</div>
-            <h3>{t("about.features.totp")}</h3>
-            <p>{t("about.features.totpDesc")}</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">💾</div>
-            <h3>{t("about.features.localStorage")}</h3>
-            <p>{t("about.features.localStorageDesc")}</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">🎲</div>
-            <h3>{t("about.features.generator")}</h3>
-            <p>{t("about.features.generatorDesc")}</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">🔍</div>
-            <h3>{t("about.features.search")}</h3>
-            <p>{t("about.features.searchDesc")}</p>
-          </div>
-        </div>
-
-        <div className="security-info">
-          <h2>🔐 {t("about.security.title")}</h2>
-          <ul>
-            {(t("about.security.items", { returnObjects: true }) as string[]).map((item: string, index: number) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="footer-info">
-          <p>{t("about.footer")}</p>
-          <p className="license">{t("about.license")}</p>
-        </div>
-      </div>
-    </div>
+    <ToolPage title={label("关于 2Pass", "About 2Pass")} code="PRODUCT INFORMATION">
+      <article className="about-sheet">
+        <header className="about-profile">
+          <div className="about-sign"><VaultMark width={43} height={43}/></div>
+          <div><h2>2Pass</h2><p>{label("本地密码管理器", "Local password manager")}</p></div>
+          <span className="about-version">v{version}</span>
+        </header>
+        <p className="about-intro">{label("2Pass 将账号、密码和动态验证码保存在设备上的加密保险库中。桌面应用无需注册，也无需连接云服务。", "The 2Pass desktop app keeps accounts, passwords, and verification codes in an encrypted vault on your device. No account or cloud service is required.")}</p>
+        <dl className="about-specs">
+          <div><dt>{label("保险库加密", "Vault encryption")}</dt><dd>AES-256-GCM</dd></div>
+          <div><dt>{label("主密码派生", "Key derivation")}</dt><dd>Argon2id</dd></div>
+          <div><dt>{label("动态验证码", "Verification codes")}</dt><dd>TOTP</dd></div>
+          <div><dt>{label("开源许可", "License")}</dt><dd>{t("about.license")}</dd></div>
+        </dl>
+        <footer><Icon name="shield" size={18} /><p>{label("请妥善保管主密码，并在设置中定期导出加密备份。", "Keep your master password safe and regularly export an encrypted backup from Settings.")}</p></footer>
+      </article>
+    </ToolPage>
   );
 }
-
-export default About;
-

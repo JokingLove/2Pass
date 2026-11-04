@@ -1,273 +1,80 @@
-import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { QRCodeSVG } from "qrcode.react";
+import { invoke } from "../utils/commands";
+import { useCopy } from "../hooks/useCopy";
+import Modal from "./Modal";
+import Icon from "./Icon";
 import "../styles/TotpConfig.css";
 
 interface TotpConfigProps {
-  currentSecret?: string;
-  accountName: string;
-  onSave: (secret: string) => void;
-  onRemove: () => void;
-  onClose: () => void;
+  currentSecret?:string; accountName:string; onSave:(secret:string)=>void|Promise<void>; onRemove:()=>void|Promise<void>; onClose:()=>void;
 }
-
-function TotpConfig({
-  currentSecret,
-  accountName,
-  onSave,
-  onRemove,
-  onClose,
-}: TotpConfigProps) {
-  const { t } = useTranslation();
-  const [secret, setSecret] = useState(currentSecret || "");
-  const [manualSecret, setManualSecret] = useState("");
-  const [qrUrl, setQrUrl] = useState("");
-  const [showManualInput, setShowManualInput] = useState(false);
-  const [testCode, setTestCode] = useState("");
-  const [testError, setTestError] = useState("");
-  const [isGeneratingTest, setIsGeneratingTest] = useState(false);
-
-  useEffect(() => {
-    if (currentSecret) {
-      setSecret(currentSecret);
-      generateQrUrl(currentSecret);
-    }
-  }, [currentSecret]);
-
-  const validateBase32 = (secret: string): boolean => {
-    // Remove spaces and padding
-    const clean = secret.replace(/\s/g, '').replace(/=/g, '');
-    // Base32 only allows A-Z and 2-7
-    const base32Regex = /^[A-Z2-7]+$/;
-    return base32Regex.test(clean);
-  };
-
-  const generateNewSecret = async () => {
+export default function TotpConfig({currentSecret,accountName,onSave,onRemove,onClose}:TotpConfigProps) {
+  const {t,i18n} = useTranslation();
+  const zh = i18n.language.startsWith("zh");
+  const [secret,setSecret] = useState(currentSecret || "");
+  const [draft,setDraft] = useState("");
+  const [qr,setQr] = useState("");
+  const [code,setCode] = useState("");
+  const [error,setError] = useState("");
+  const [busy,setBusy] = useState(false);
+  const {copyToClipboard,isCopied} = useCopy();
+  useEffect(()=>{
+    if(!secret) return;
+    let active = true;
+    setQr("");
+    invoke<string>("get_totp_qr_url",{secret,accountName,issuer:"2Pass"})
+      .then(url=>{if(active) setQr(url);}).catch(()=>{if(active) setError(t("totp.configError"));});
+    return ()=>{active=false;};
+  },[secret,accountName,t]);
+  useEffect(()=>{
+    if(!code) return;
+    const timer=window.setTimeout(()=>setCode(""),30000 - Date.now()%30000);
+    return ()=>window.clearTimeout(timer);
+  },[code]);
+  const preview = async (newKey:boolean) => {
+    setError("");setBusy(true);
     try {
-      const newSecret = await invoke<string>("generate_totp_secret");
-      console.log("=== TOTP Secret Generation ===");
-      console.log("Generated secret:", newSecret);
-      console.log("Secret length:", newSecret.length);
-      console.log("Secret type:", typeof newSecret);
-      console.log("Is Base32 valid:", validateBase32(newSecret));
-      
-      // Validate the generated secret
-      if (!newSecret || typeof newSecret !== 'string') {
-        throw new Error(`Invalid secret type: ${typeof newSecret}`);
-      }
-      
-      if (newSecret.includes('-') || newSecret.includes('_')) {
-        throw new Error(`Secret looks like UUID: ${newSecret}`);
-      }
-      
-      if (!validateBase32(newSecret)) {
-        throw new Error(`Secret is not valid Base32: ${newSecret}`);
-      }
-      
-      setSecret(newSecret);
-      setManualSecret("");
-      setShowManualInput(false);
-      setTestError("");
-      await generateQrUrl(newSecret);
-      
-      console.log("✓ Secret validated and set successfully");
-    } catch (error) {
-      console.error("Failed to generate secret:", error);
-      setTestError(`${t("totp.generateSecretFailed")}: ${error}`);
-    }
+      const key = newKey ? await invoke<string>("generate_totp_secret") : draft.replace(/\s/g,"").toUpperCase();
+      if(!/^[A-Z2-7]+={0,6}$/.test(key) || key.length > 256) throw new Error();
+      const result = await invoke<string>("generate_totp",{secret:key});
+      setSecret(key);setCode(result);setDraft("");
+    } catch { setError(zh ? "密钥无效，请检查 Base32 字符后重试。" : "Invalid key. Check the Base32 characters and try again."); }
+    finally {setBusy(false);}
   };
-
-  const generateQrUrl = async (secretValue: string) => {
+  async function commit(remove: boolean) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
     try {
-      const url = await invoke<string>("get_totp_qr_url", {
-        secret: secretValue,
-        accountName: accountName,
-        issuer: "2Pass",
-      });
-      setQrUrl(url);
-    } catch (error) {
-      console.error("Failed to generate QR URL:", error);
-    }
-  };
-
-  const handleManualSecret = () => {
-    if (manualSecret.trim()) {
-      const cleanSecret = manualSecret.replace(/\s/g, "").toUpperCase();
-      setSecret(cleanSecret);
-      generateQrUrl(cleanSecret);
-      setShowManualInput(false);
-    }
-  };
-
-  const testTotpCode = async () => {
-    if (!secret) {
-      setTestError(t("totp.pleaseGenerateSecret"));
-      return;
-    }
-    
-    console.log("Testing with secret:", secret);
-    console.log("Secret length:", secret.length);
-    
-    setIsGeneratingTest(true);
-    setTestError("");
-    setTestCode("");
-    
-    try {
-      const code = await invoke<string>("generate_totp", { secret });
-      console.log("Generated code:", code);
-      setTestCode(code);
-      setTestError("");
-      // 30秒后自动清除
-      setTimeout(() => {
-        setTestCode("");
-      }, 30000);
-    } catch (error) {
-      console.error("Failed to generate TOTP:", error);
-      console.error("Secret that failed:", secret);
-      setTestError(`${t("totp.generateFailed")}: ${error}`);
-      setTestCode("");
+      if (remove) await onRemove();
+      else await onSave(secret);
+    } catch {
+      setError(zh ? "GA 配置未保存，请重试。" : "Could not save the GA settings. Try again.");
     } finally {
-      setIsGeneratingTest(false);
+      setBusy(false);
     }
-  };
-
-  const handleSave = () => {
-    if (secret) {
-      onSave(secret);
-    }
-  };
-
-  const formatSecret = (sec: string) => {
-    return sec.match(/.{1,4}/g)?.join(" ") || sec;
-  };
-
-  return (
-    <div className="totp-config-overlay">
-      <div className="totp-config-container">
-        <div className="totp-config-header">
-          <h2>⏱️ {t("totp.configTitle")}</h2>
-          <button onClick={onClose} className="close-btn">
-            ✕
-          </button>
+  }
+  return <Modal title={zh ? "配置 Google 验证码（GA）" : "Set up Google Authenticator (GA)"} icon="clock" busy={busy} onClose={onClose}>
+    <div className="vm-fields">
+      {!secret ? <>
+        <label className="vm-field">{zh ? "输入服务提供的设置密钥" : "Enter the setup key from your service"}<input autoCapitalize="characters" autoComplete="off" spellCheck={false} autoFocus value={draft} onChange={e=>setDraft(e.target.value)} placeholder={t("totp.enterBase32Key")}/></label>
+        <div className="totp-setup-actions"><button className="vm-button is-primary" disabled={!draft.trim() || busy} onClick={()=>preview(false)}>{t("totp.apply")}</button><button className="vm-button" disabled={busy} onClick={()=>preview(true)}>{t("totp.generateSecret")}</button></div>
+      </> : <>
+        <div className="totp-setup-card">
+          {qr && <div aria-label={t("totp.scanQRCode")} className="totp-setup-qr"><QRCodeSVG value={qr} size={132} marginSize={4}/></div>}
+          <div><b>{accountName}</b><p className="vm-muted">{t("totp.scanQRCodeHint")}</p></div>
         </div>
-
-        <div className="totp-config-content">
-          {!currentSecret && (
-            <div className="config-section">
-              <h3>{t("totp.generateNewSecret")}</h3>
-              <button onClick={generateNewSecret} className="generate-btn">
-                🔑 {t("totp.generateSecret")}
-              </button>
-              <button
-                onClick={() => setShowManualInput(!showManualInput)}
-                className="manual-btn"
-              >
-                ✍️ {t("totp.manualInput")}
-              </button>
-
-              {showManualInput && (
-                <div className="manual-input-section">
-                  <input
-                    type="text"
-                    value={manualSecret}
-                    onChange={(e) => setManualSecret(e.target.value)}
-                    placeholder={t("totp.enterBase32Key")}
-                    className="manual-input"
-                  />
-                  <button onClick={handleManualSecret} className="apply-btn">
-                    {t("totp.apply")}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {secret && (
-            <>
-              <div className="config-section">
-                <h3>{t("totp.secretInfo")}</h3>
-                <div className="secret-display">
-                  <code>{formatSecret(secret)}</code>
-                  <button
-                    onClick={() => navigator.clipboard.writeText(secret)}
-                    className="copy-secret-btn"
-                  >
-                    📋 {t("generator.copy")}
-                  </button>
-                </div>
-              </div>
-
-              <div className="config-section">
-                <h3>{t("totp.scanQRCode")}</h3>
-                <p className="info-text">
-                  {t("totp.scanQRCodeHint")}
-                </p>
-                {qrUrl && (
-                  <div className="qr-section">
-                    <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(
-                        qrUrl
-                      )}`}
-                      alt="QR Code"
-                      className="qr-code"
-                    />
-                    <p className="qr-url-text">
-                      {t("totp.orManualAccount")}: {accountName}
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="config-section">
-                <h3>{t("totp.testCode")}</h3>
-                <button 
-                  onClick={testTotpCode} 
-                  className="test-btn"
-                  disabled={isGeneratingTest || !secret}
-                >
-                  {isGeneratingTest ? "⏳ " + t("totp.generating") : "🧪 " + t("totp.generateTestCode")}
-                </button>
-                {testCode && (
-                  <div className="test-code-display">
-                    <span className="test-code">{testCode}</span>
-                    <small>{t("totp.codeValidFor30s")}</small>
-                  </div>
-                )}
-                {testError && (
-                  <div className="test-error-display">
-                    <span className="error-icon">⚠️</span>
-                    <span className="error-text">{testError}</span>
-                  </div>
-                )}
-                {!secret && (
-                  <div className="test-hint">
-                    💡 {t("totp.testHint")}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="totp-config-actions">
-          {currentSecret && (
-            <button onClick={onRemove} className="remove-btn">
-              🗑️ {t("totp.removeTotp")}
-            </button>
-          )}
-          {secret && (
-            <button onClick={handleSave} className="save-btn">
-              💾 {t("totp.saveConfig")}
-            </button>
-          )}
-          <button onClick={onClose} className="cancel-btn">
-            {t("forms.cancel")}
-          </button>
-        </div>
-      </div>
+        <div className="vm-field"><span>{t("totp.secretInfo")}</span><div className="vm-row"><code className="totp-setup-key">{secret.match(/.{1,4}/g)?.join(" ")}</code><button type="button" className="vm-icon" aria-label={t("generator.copy")} onClick={()=>copyToClipboard(secret,"setup").catch(()=>setError(t("totp.copyFailed")))}><Icon name={isCopied("setup")?"check":"copy"} size={16}/></button></div></div>
+        <div className="totp-setup-actions"><button className="vm-button" onClick={async()=>{try{setCode(await invoke<string>("generate_totp",{secret}));}catch{setError(t("totp.configError"));}}}>{t("totp.testCode")}</button>
+        {code && <code className="totp-setup-code">{code}</code>}</div>
+      </>}
+      {error && <p role="alert" className="vm-error">{error}</p>}
     </div>
-  );
+    <div className="vm-actions">{currentSecret && <button className="vm-button is-danger totp-remove" disabled={busy} onClick={()=>commit(true)}>{t("forms.delete")}</button>}
+      <button className="vm-button" disabled={busy} onClick={onClose}>{t("forms.cancel")}</button>
+      {secret && <button className="vm-button is-primary" disabled={busy} onClick={()=>commit(false)}>{t("totp.saveConfig")}</button>}
+    </div>
+  </Modal>;
 }
-
-export default TotpConfig;
-

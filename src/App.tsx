@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke, nativeVault, startDemo, endDemo } from "./utils/commands";
+import Icon from "./components/Icon";
+import VaultMark from "./components/VaultMark";
 import { useTranslation } from "react-i18next";
 import Login from "./components/Login";
 import GroupList from "./components/GroupList";
 import GroupForm from "./components/GroupForm";
 import PasswordList from "./components/PasswordList";
 import PasswordForm from "./components/PasswordForm";
+import TotpConfig from "./components/TotpConfig";
 import GeneratorView from "./components/GeneratorView";
 import Settings from "./components/Settings";
 import About from "./components/About";
@@ -13,39 +17,77 @@ import ToastContainer from "./components/ToastContainer";
 import { PasswordEntry, PasswordGroup } from "./types";
 import { useKeyboard } from "./hooks/useKeyboard";
 import { useToast } from "./hooks/useToast";
-import { useResponsive } from "./hooks/useResponsive";
 import "./App.css";
-import "./styles/responsive/index.css";
+
 
 function App() {
-  const { t } = useTranslation();
-  const { isMobile } = useResponsive(); // 响应式状态
+  const { t, i18n } = useTranslation();
+  const zh = i18n.language.startsWith("zh");
+  const [drawer, setDrawer] = useState(false);
+  const [railCollapsed, setRailCollapsed] = useState(() => localStorage.getItem("2pass.sidebar.collapsed") === "true");
+  const modifier = /mac/i.test(navigator.platform) ? "⌘" : "Ctrl";
+  const drawerToggle = useRef<HTMLButtonElement>(null);
+  const desktopRailToggle = useRef<HTMLButtonElement>(null);
+  const drawerClose = useRef<HTMLButtonElement>(null);
+  const sessionVersion = useRef(0);
+  const locking = useRef(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [currentView, setCurrentView] = useState("passwords");
   const [entries, setEntries] = useState<PasswordEntry[]>([]);
   const [groups, setGroups] = useState<PasswordGroup[]>([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [gaEntryId, setGaEntryId] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showGroupForm, setShowGroupForm] = useState(false);
   const [editingEntry, setEditingEntry] = useState<PasswordEntry | undefined>();
   const [editingGroup, setEditingGroup] = useState<PasswordGroup | undefined>();
   const [searchTerm, setSearchTerm] = useState("");
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(0); // 0 表示禁用，单位：分钟
-  const [theme, setTheme] = useState<string>("default");
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme || "default");
   const toast = useToast();
 
   useEffect(() => {
-    // 加载主题设置
-    const savedTheme = localStorage.getItem("theme") || "default";
-    setTheme(savedTheme);
-    document.documentElement.setAttribute("data-theme", savedTheme);
+    if (!nativeVault) return;
+    const dark = getComputedStyle(document.documentElement).colorScheme === "dark";
+    // Keep the native title bar in the same light or dark appearance as the vault.
+    getCurrentWindow().setTheme(dark ? "dark" : "light").catch(() => {
+      // Some mobile platforms manage window appearance themselves.
+    });
+  }, [theme]);
 
-    // 设置 HTML lang 属性
-    const savedLanguage = localStorage.getItem("language") || "zh-CN";
-    document.documentElement.setAttribute("lang", savedLanguage);
-  }, []);
+  useEffect(() => {
+    document.documentElement.lang = i18n.language;
+    document.title = t("app.title");
+  }, [i18n.language, t]);
 
+  const handleLock = useCallback(async () => {
+    if (locking.current) return;
+    locking.current = true;
+    try {
+      if (nativeVault) await invoke("lock_vault");
+      else endDemo();
+    } catch {
+      toast.error(t("workspace.lockFailed"));
+      return;
+    } finally {
+      locking.current = false;
+    }
+    sessionVersion.current++;
+    setIsAuthenticated(false);
+    setGaEntryId(null);
+    setEntries([]); setGroups([]); setSelectedGroupId(null); setSearchTerm("");
+    setShowForm(false); setEditingEntry(undefined); setShowGroupForm(false); setEditingGroup(undefined);
+    setDrawer(false); setCurrentView("passwords");
+  }, [toast.error, t]);
 
+  useEffect(() => {
+    if (!drawer) return;
+    drawerClose.current?.focus();
+    const media = matchMedia("(min-width: 721px)");
+    const closeOnDesktop = () => { if (media.matches) setDrawer(false); };
+    media.addEventListener("change", closeOnDesktop);
+    return () => media.removeEventListener("change", closeOnDesktop);
+  }, [drawer]);
 
   // 自动锁定逻辑
   useEffect(() => {
@@ -57,17 +99,14 @@ function App() {
       if (timeoutId) clearTimeout(timeoutId);
 
       timeoutId = setTimeout(() => {
-        console.log(t("common.autoLockTriggered"));
-        setIsAuthenticated(false);
-        setEntries([]);
-        setCurrentView("passwords");
+        handleLock();
       }, autoLockTimeout * 60 * 1000); // 转换为毫秒
     };
 
     // 监听用户活动
     const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
     events.forEach(event => {
-      document.addEventListener(event, resetTimer);
+      document.addEventListener(event, resetTimer, true);
     });
 
     // 初始化计时器
@@ -76,38 +115,21 @@ function App() {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       events.forEach(event => {
-        document.removeEventListener(event, resetTimer);
+        document.removeEventListener(event, resetTimer, true);
       });
     };
-  }, [isAuthenticated, autoLockTimeout]);
+  }, [isAuthenticated, autoLockTimeout, handleLock]);
 
   const loadEntries = async () => {
-    try {
-      const data = await invoke<PasswordEntry[]>("get_all_entries");
-      setEntries(data);
-    } catch (error) {
-      console.error("Failed to load entries:", error);
-    }
+    const current = sessionVersion.current;
+    const data = await invoke<PasswordEntry[]>("get_all_entries");
+    if (current === sessionVersion.current) setEntries(data);
   };
 
   const loadGroups = async () => {
-    try {
-      const data = await invoke<PasswordGroup[]>("get_all_groups");
-      // 按 sort_order 排序
-      const sorted = data.sort((a, b) => {
-        if (a.sort_order !== undefined && b.sort_order !== undefined) {
-          return a.sort_order - b.sort_order;
-        }
-        if (a.sort_order !== undefined) return -1;
-        if (b.sort_order !== undefined) return 1;
-        return a.created_at - b.created_at;
-      });
-      setGroups(sorted);
-    } catch (error) {
-      console.error("Failed to load groups:", error);
-      // 如果后端还没实现，使用默认分组
-      setGroups([]);
-    }
+    const current = sessionVersion.current;
+    const data = await invoke<PasswordGroup[]>("get_all_groups");
+    if (current === sessionVersion.current) setGroups(data.sort((a, b) => a.sort_order - b.sort_order || a.created_at - b.created_at));
   };
 
   const handleLogin = async () => {
@@ -116,10 +138,8 @@ function App() {
       await Promise.all([loadEntries(), loadGroups()]);
 
       // 加载自动锁定设置
-      const savedTimeout = localStorage.getItem("autoLockTimeout");
-      if (savedTimeout) {
-        setAutoLockTimeout(parseInt(savedTimeout, 10));
-      }
+      const savedTimeout = Number(localStorage.getItem("autoLockTimeout"));
+      setAutoLockTimeout(Number.isFinite(savedTimeout) && savedTimeout > 0 ? savedTimeout : 0);
 
       // 数据加载完成后才设置为已认证
       setIsAuthenticated(true);
@@ -192,7 +212,7 @@ function App() {
       toast.success(editingEntry ? t("passwords.passwordUpdated") : t("passwords.passwordAdded"));
     } catch (error) {
       console.error("Failed to save entry:", error);
-      toast.error(t("passwords.saveFailed") + "：" + error);
+      throw error;
     }
   };
 
@@ -208,18 +228,12 @@ function App() {
   };
 
   const handleUpdateOrder = async (updatedEntries: PasswordEntry[]) => {
-    console.log("App.tsx: handleUpdateOrder 被调用");
-    console.log("要更新的条目数量:", updatedEntries.length);
-
     try {
-      // 批量更新所有条目
+      // Persist the changed ranks in the vault.
       for (const entry of updatedEntries) {
-        console.log(`更新条目: ${entry.title}, sort_order: ${entry.sort_order}`);
         await invoke("update_entry", { entry });
       }
-      console.log("批量更新完成，重新加载数据");
       await loadEntries();
-      console.log("数据重新加载完成");
     } catch (error) {
       console.error("Failed to update order:", error);
       toast.error(t("passwords.updateOrderFailed") + "：" + error);
@@ -233,15 +247,9 @@ function App() {
 
   const handleViewChange = (view: string) => {
     setCurrentView(view);
+    setDrawer(false);
     setShowForm(false);
     setEditingEntry(undefined);
-  };
-
-  const handleLock = () => {
-    setIsAuthenticated(false);
-    setEntries([]);
-    setGroups([]);
-    setCurrentView("passwords");
   };
 
   const handleAddGroup = () => {
@@ -263,6 +271,7 @@ function App() {
           id: crypto.randomUUID(),
           name: groupData.name!,
           icon: groupData.icon!,
+          color: groupData.color,
           sort_order: groups.length,
           created_at: Date.now(),
         };
@@ -274,7 +283,7 @@ function App() {
       toast.success(editingGroup ? t("groups.groupUpdated") : t("groups.groupAdded"));
     } catch (error) {
       console.error("Failed to save group:", error);
-      toast.error(t("groups.saveGroupFailed") + "：" + error);
+      throw error;
     }
   };
 
@@ -315,8 +324,8 @@ function App() {
   };
 
   const handleRefresh = async () => {
-    await loadEntries();
-  }
+    await Promise.all([loadEntries(), loadGroups()]);
+  };
 
   const handleThemeChange = (newTheme: string) => {
     setTheme(newTheme);
@@ -324,13 +333,28 @@ function App() {
     document.documentElement.setAttribute("data-theme", newTheme);
   };
 
-  // 全局快捷键
+  const closeDrawer = () => {
+    setDrawer(false);
+    requestAnimationFrame(() => drawerToggle.current?.focus());
+  };
+
+  const toggleRail = () => {
+    if (document.querySelector("dialog[open]")) return;
+    if (matchMedia("(max-width: 720px)").matches) {
+      if (drawer) closeDrawer();
+      else setDrawer(true);
+    } else {
+      setRailCollapsed(!railCollapsed);
+      localStorage.setItem("2pass.sidebar.collapsed", String(!railCollapsed));
+      if (!railCollapsed) requestAnimationFrame(() => desktopRailToggle.current?.focus());
+    }
+  };
+
   useKeyboard({
-    onLock: handleLock,
+    onLock: isAuthenticated ? handleLock : undefined,
+    onToggleSidebar: isAuthenticated ? toggleRail : undefined,
     onEscape: () => {
-      if (showForm) {
-        handleCancelForm();
-      }
+      if (drawer && !document.querySelector("dialog[open]")) closeDrawer();
     },
   });
 
@@ -347,12 +371,12 @@ function App() {
     : entries;
 
   const handleMoveToGroup = async (entryId: string, targetGroupId: string | null) => {
-    // 找到被拖动的密码条目
+    // Resolve the current entry before changing its folder.
     const entry = entries.find((e) => e.id === entryId);
     if (!entry) return;
 
     // 如果分组没有变化，不做任何操作
-    if (entry.group_id === targetGroupId) return;
+    if ((entry.group_id ?? null) === targetGroupId) return;
 
     // 更新密码的分组
     const updatedEntry = { ...entry, group_id: targetGroupId };
@@ -363,7 +387,7 @@ function App() {
 
       const groupName = targetGroupId
         ? groups.find(g => g.id === targetGroupId)?.name || t("groups.title")
-        : t("passwords.allPasswords");
+        : t("groups.noGroup");
       toast.success(t("passwords.movedToGroup", { groupName }));
     } catch (error) {
       console.error("Failed to move entry:", error);
@@ -371,130 +395,95 @@ function App() {
     }
   };
 
-  const renderView = () => {
-    switch (currentView) {
-      case "passwords":
-        return (
-          <div className="three-column-layout">
-            {/* 分组列表 - 桌面端显示，移动端隐藏 */}
-            {!isMobile && (
-              <GroupList
-                groups={groups}
-                selectedGroupId={selectedGroupId}
-                onSelectGroup={setSelectedGroupId}
-                onAddGroup={handleAddGroup}
-                onEditGroup={handleEditGroup}
-                onDeleteGroup={handleDeleteGroup}
-                onUpdateGroupOrder={handleUpdateGroupOrder}
-                entryCountByGroup={entryCountByGroup}
-              />
-            )}
-            {/* 密码列表 - 始终显示 */}
-            <PasswordList
-              entries={filteredEntries}
-              onEdit={handleEditEntry}
-              onDelete={handleDeleteEntry}
-              onAdd={handleAddEntry}
-              onUpdateOrder={handleUpdateOrder}
-              onMoveToGroup={handleMoveToGroup}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-            />
-          </div>
-        );
-      case "generator":
-        return <GeneratorView />;
-      case "settings":
-        return (
-          <Settings
-            autoLockTimeout={autoLockTimeout}
-            onAutoLockChange={handleAutoLockChange}
-            onLock={handleLock}
-            theme={theme}
-            onThemeChange={handleThemeChange}
-            onRefresh={handleRefresh}
-          />
-        );
-      case "about":
-        return <About />;
-      default:
-        return (
-          <div className="three-column-layout">
-            {/* 分组列表 - 桌面端显示，移动端隐藏 */}
-            {!isMobile && (
-              <GroupList
-                groups={groups}
-                selectedGroupId={selectedGroupId}
-                onSelectGroup={setSelectedGroupId}
-                onAddGroup={handleAddGroup}
-                onEditGroup={handleEditGroup}
-                onDeleteGroup={handleDeleteGroup}
-                onUpdateGroupOrder={handleUpdateGroupOrder}
-                entryCountByGroup={entryCountByGroup}
-              />
-            )}
-            {/* 密码列表 - 始终显示 */}
-            <PasswordList
-              entries={filteredEntries}
-              onEdit={handleEditEntry}
-              onDelete={handleDeleteEntry}
-              onAdd={handleAddEntry}
-              onUpdateOrder={handleUpdateOrder}
-              onMoveToGroup={handleMoveToGroup}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
-            />
-          </div>
-        );
-    }
+  const gaEntry = gaEntryId ? entries.find(entry => entry.id === gaEntryId) : undefined;
+  const saveGaKey = async (secret?: string) => {
+    if (!gaEntry) return;
+    await invoke("update_entry", { entry: { ...gaEntry, totp_secret: secret, updated_at: Date.now() } });
+    await loadEntries();
+    setGaEntryId(null);
+    toast.success(zh ? "GA 配置已保存" : "GA settings saved");
   };
 
-  if (!isAuthenticated) {
-    return <Login onLogin={handleLogin} />;
-  }
+  const views = [
+    { id: "passwords", icon: "vault", label: t("passwords.allPasswords") },
+    { id: "generator", icon: "generator", label: t("generator.title") },
+    { id: "settings", icon: "settings", label: t("settings.title") },
+    { id: "about", icon: "info", label: t("nav.about") },
+  ];
+  const navigate = (view: string, groupId: string | null = null) => {
+    handleViewChange(view); setSelectedGroupId(groupId); setSearchTerm("");
+    if (drawer) requestAnimationFrame(() => drawerToggle.current?.focus());
+  };
+  const navItem = ({ id, icon, label }: typeof views[number]) => {
+    const active = currentView === id && (id !== "passwords" || !selectedGroupId);
+    return <button type="button" key={id} className={`rail-link ${active ? "is-active" : ""}`}
+      aria-current={active ? "page" : undefined} onClick={() => navigate(id)}>
+      <Icon name={icon} size={18}/><span>{label}</span>{id === "passwords" && <span className="rail-count">{entries.length}</span>}
+    </button>;
+  };
+  const location = currentView === "passwords" && selectedGroupId
+    ? groups.find(group => group.id === selectedGroupId)?.name : views.find(v => v.id === currentView)?.label;
+
+  const railToggleLabel = railCollapsed
+    ? (zh ? "展开侧栏" : "Show sidebar")
+    : (zh ? "收起侧栏" : "Hide sidebar");
+
+  if (!isAuthenticated) return <Login theme={theme} onThemeChange={handleThemeChange} onLogin={handleLogin} onDemo={nativeVault ? undefined : async () => {
+    startDemo(zh); await handleLogin();
+  }}/>;
 
   return (
-    <div className="app-container">
-      {/* 顶部工具栏 */}
-      <header className="app-header">
-        <nav className="header-nav">
-          <button
-            className={`nav-btn ${currentView === "passwords" ? "active" : ""}`}
-            onClick={() => handleViewChange("passwords")}
-          >
-            🔐 {t("nav.passwords")}
-          </button>
-          <button
-            className={`nav-btn ${currentView === "generator" ? "active" : ""}`}
-            onClick={() => handleViewChange("generator")}
-          >
-            🎲 {t("nav.generator")}
-          </button>
-          <button
-            className={`nav-btn ${currentView === "settings" ? "active" : ""}`}
-            onClick={() => handleViewChange("settings")}
-          >
-            ⚙️ {t("nav.settings")}
-          </button>
-          <button
-            className={`nav-btn ${currentView === "about" ? "active" : ""}`}
-            onClick={() => handleViewChange("about")}
-          >
-            ℹ️ {t("nav.about")}
-          </button>
-        </nav>
-        <div className="header-right">
-          <button onClick={handleLock} className="lock-btn" title={t("nav.lock")}>
-            🔒 {t("nav.lock")}
-          </button>
+    <div className={`app-container ${drawer ? "drawer-open" : ""} ${railCollapsed ? "rail-collapsed" : ""}`}>
+      {drawer && <div className="rail-backdrop" onClick={closeDrawer}/>}
+      <aside id="workspace-navigation" className="workspace-rail" aria-label={zh ? "侧边栏" : "Sidebar"}>
+        <header className="rail-brand">
+          <VaultMark width={34} height={34}/>
+          <div className="rail-brand-text"><b>2Pass</b>
+            <span>{nativeVault ? (zh ? "本地保险库" : "Local vault") : (zh ? "演示保险库" : "Demo vault")}</span>
+          </div>
+          <button className="rail-close icon-btn" ref={drawerClose} aria-label={t("forms.close")} onClick={closeDrawer}><Icon name="x"/></button>
+        </header>
+        <div className="rail-scroll">
+          <nav className="rail-primary-nav" aria-label={zh ? "主导航" : "Workspace"}>{views.slice(0,2).map(navItem)}</nav>
+          <GroupList groups={groups} selectedGroupId={currentView === "passwords" ? selectedGroupId : null} hideAll
+            onSelectGroup={id => navigate("passwords", id)} onAddGroup={handleAddGroup}
+            onEditGroup={handleEditGroup} onDeleteGroup={handleDeleteGroup}
+            onUpdateGroupOrder={handleUpdateGroupOrder} entryCountByGroup={entryCountByGroup}/>
         </div>
-      </header>
+        <footer className="rail-bottom">
+          <nav className="rail-tools" aria-label={zh ? "偏好与帮助" : "Preferences and help"}>{views.slice(2).map(navItem)}</nav>
+          <button type="button" className="rail-lock" onClick={handleLock}>
+            <Icon name="lock" size={15}/>
+            <span>{nativeVault ? (zh ? "锁定保险库" : "Lock vault") : (zh ? "退出演示" : "Exit demo")}</span>
+            <kbd aria-hidden="true">{modifier} L</kbd>
+          </button>
+        </footer>
+      </aside>
+      <div className="workspace-body" inert={drawer}>
+        <header className="workspace-bar">
+          <button type="button" ref={drawerToggle} className="rail-toggle icon-btn" aria-controls="workspace-navigation" aria-expanded={drawer} aria-label={zh ? "打开导航" : "Open navigation"} onClick={() => setDrawer(true)}><Icon name="menu"/></button>
+          <button type="button" ref={desktopRailToggle} className="rail-desktop-toggle icon-btn" aria-label={railToggleLabel}
+            aria-expanded={!railCollapsed} aria-controls="workspace-navigation" title={railToggleLabel + " (" + modifier + " B)"} onClick={toggleRail}>
+            <Icon name="panel" size={17}/>
+          </button>
+          <span className="workspace-crumb">{zh ? "个人保险库" : "Personal vault"}</span><span className="crumb-sep">/</span>
+          <strong>{location}</strong>
+          <span className="session-badge"><i/>{nativeVault ? (zh ? "本地会话" : "Local session") : (zh ? "演示模式" : "Demo session")}</span>
+        </header>
+        <main className="app-main" key={currentView}>
+          {currentView === "passwords" ? <PasswordList key={selectedGroupId || "all"} entries={filteredEntries}
+            allEntries={entries} groups={groups} selectedGroupId={selectedGroupId} onEdit={handleEditEntry} onDelete={handleDeleteEntry} onConfigureGa={entry => setGaEntryId(entry.id)}
+            onAdd={handleAddEntry} onUpdateOrder={handleUpdateOrder} onMoveToGroup={handleMoveToGroup}
+            searchTerm={searchTerm} onSearchChange={setSearchTerm}/>
+          : currentView === "generator" ? <GeneratorView/>
+          : currentView === "settings" ? <Settings autoLockTimeout={autoLockTimeout} onAutoLockChange={handleAutoLockChange}
+            onLock={handleLock} theme={theme} onThemeChange={handleThemeChange} onRefresh={handleRefresh} demo={!nativeVault}/>
+          : <About/>}
+        </main>
+      </div>
 
-      {/* 主内容区 */}
-      <main className="app-main">
-        {renderView()}
-      </main>
-
+      {gaEntry && <TotpConfig key={gaEntry.id} accountName={gaEntry.title} currentSecret={gaEntry.totp_secret}
+        onSave={saveGaKey} onRemove={() => saveGaKey()} onClose={() => setGaEntryId(null)} />}
       {/* 弹窗 */}
       {showForm && (
         <PasswordForm

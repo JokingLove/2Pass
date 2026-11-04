@@ -8,6 +8,8 @@ export interface PasswordHistory {
 export interface PasswordEntry {
   id: string;
   title: string;
+  icon?: string;
+  color?: string;
   username: string;
   password: string;
   url?: string[];

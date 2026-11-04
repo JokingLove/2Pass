@@ -1,0 +1,111 @@
+.quick-picker {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: var(--text-primary);
+}
+.quick-picker legend {
+  padding: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+.quick-picker-hint {
+  margin: 4px 0 10px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.quick-picker-items {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  border: 1px solid var(--border-light);
+  border-radius: 7px;
+  background: var(--bg-primary);
+}
+.quick-picker-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 39px;
+  padding-inline: 11px 5px;
+}
+.quick-picker-row + .quick-picker-row { border-top: 1px solid var(--border-light); }
+.quick-picker-choice {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  gap: 9px;
+  min-width: 0;
+  font-size: 13px;
+  cursor: pointer;
+}
+.quick-picker-choice input {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--primary-color);
+}
+.quick-picker-choice.is-disabled { color: var(--text-tertiary); cursor: not-allowed; }
+.quick-picker-order { display: flex; gap: 2px; }
+.quick-picker-order button {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  padding: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  border-radius: 5px;
+}
+.quick-picker-order button:not(:disabled):hover {
+  color: var(--primary-color);
+  background: var(--primary-light);
+}
+.quick-picker-order button:disabled { opacity: .35; }
+
+.entry-quick-config {
+  flex: none;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: var(--card-bg);
+}
+.entry-quick-config summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: inherit;
+  color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+.entry-quick-config summary::-webkit-details-marker { display: none; }
+.entry-quick-config summary:hover { background: var(--hover-bg); }
+.entry-quick-title { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.entry-quick-title strong { color: var(--text-primary); font-size: 13px; font-weight: 550; }
+.entry-quick-title small { color: var(--text-secondary); font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.entry-quick-config[open] summary > svg:last-child { transform: rotate(90deg); }
+.entry-quick-content {
+  display: grid;
+  gap: 12px;
+  padding: 13px 12px;
+  border-top: 1px solid var(--border-light);
+}
+.entry-quick-content > p { margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.entry-quick-content .entry-quick-reset {
+  justify-self: start;
+  padding: 5px 0;
+  color: var(--primary-color);
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.entry-quick-reset:hover { text-decoration: underline; }

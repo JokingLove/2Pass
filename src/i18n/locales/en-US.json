@@ -1,4 +1,5 @@
 {
+  "workspace": { "lockFailed": "Could not lock the vault. Please try again." },
   "app": {
     "title": "2Pass Password Manager"
   },

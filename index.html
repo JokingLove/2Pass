@@ -1,14 +1,46 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <script>
+      // Set the saved palette before the WebView paints its first frame.
+      try {
+        const saved = localStorage.getItem("theme");
+        let palette = "default";
+        if (["slate", "sky-blue", "glass"].includes(saved)) palette = "slate";
+        if (saved === "gold" || saved === "rose") palette = saved;
+        document.documentElement.dataset.theme = palette;
+      } catch {
+        document.documentElement.dataset.theme = "default";
+      }
+    </script>
+    <link rel="stylesheet" href="/src/styles/themes.css" />
+    <link rel="icon" type="image/svg+xml" href="/vault-mark.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
+    <title>2Pass · Personal Vault</title>
+    <style>
+      html, body { margin: 0; background: var(--bg-color, #f6f6f4); }
+      .startup-brand {
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 12px;
+        min-height: 100vh;
+        min-height: 100dvh;
+        color: var(--text-primary, #242426);
+        font: 600 22px/1.15 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        letter-spacing: -.05em;
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="startup-brand" role="status">
+        <img src="/vault-mark.svg" width="58" height="58" alt="" />
+        <span>2Pass</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

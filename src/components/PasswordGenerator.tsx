@@ -1,165 +1,90 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useCopy } from "../hooks/useCopy";
+import { calculateStrength } from "../utils/passwordStrength";
+import Icon from "./Icon";
+import { useToolText } from "./ToolPage";
 import "../styles/PasswordGenerator.css";
 
-interface PasswordGeneratorProps {
-  onGenerate: (password: string) => void;
-}
+const sets = [
+  ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "A–Z", "大写字母", "Uppercase"],
+  ["abcdefghijklmnopqrstuvwxyz", "a–z", "小写字母", "Lowercase"],
+  ["0123456789", "0–9", "数字", "Numbers"],
+  ["!@#$%^&*()_+-=[]{}|;:,.<>?", "#&!", "符号", "Symbols"],
+];
 
-function PasswordGenerator({  }: PasswordGeneratorProps) {
-  const { t } = useTranslation();
-  const { copyToClipboard, isCopied } = useCopy();
-  const [length, setLength] = useState(16);
-  const [includeUppercase, setIncludeUppercase] = useState(true);
-  const [includeLowercase, setIncludeLowercase] = useState(true);
-  const [includeNumbers, setIncludeNumbers] = useState(true);
-  const [includeSymbols, setIncludeSymbols] = useState(true);
-  const [generatedPassword, setGeneratedPassword] = useState("");
-
-  const generatePassword = () => {
-    let charset = "";
-    if (includeUppercase) charset += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    if (includeLowercase) charset += "abcdefghijklmnopqrstuvwxyz";
-    if (includeNumbers) charset += "0123456789";
-    if (includeSymbols) charset += "!@#$%^&*()_+-=[]{}|;:,.<>?";
-
-    if (charset === "") {
-      alert("请至少选择一种字符类型");
-      return;
-    }
-
-    let password = "";
-    const array = new Uint32Array(length);
-    crypto.getRandomValues(array);
-
-    for (let i = 0; i < length; i++) {
-      password += charset[array[i] % charset.length];
-    }
-
-    setGeneratedPassword(password);
-  };
-
-  const handleCopy = async () => {
-    if (generatedPassword) {
-      try {
-        await copyToClipboard(generatedPassword, "generated-password");
-      } catch (err) {
-        console.error(t("generator.copy") + " " + t("common.error") + ":", err);
+function generate(length: number, selected: boolean[]) {
+  const enabled = sets.filter((_, index) => selected[index]).map(([chars]) => chars);
+  const alphabet = enabled.join("");
+  // Rejection sampling avoids modulo bias and ensures each selected group occurs.
+  const limit = 256 - 256 % alphabet.length;
+  const bytes = new Uint8Array(length * 2);
+  for (;;) {
+    let output = "";
+    while (output.length < length) {
+      crypto.getRandomValues(bytes);
+      for (const byte of bytes) {
+        if (byte < limit) output += alphabet[byte % alphabet.length];
+        if (output.length === length) break;
       }
     }
+    if (enabled.every(chars => [...output].some(char => chars.includes(char)))) return output;
+  }
+}
+
+export default function PasswordGenerator({ onGenerate }: { onGenerate?: (password: string) => void }) {
+  const { t } = useTranslation();
+  const label = useToolText();
+  const [length, setLength] = useState(20);
+  const [enabled, setEnabled] = useState([true, true, true, true]);
+  const [password, setPassword] = useState(() => generate(20, [true, true, true, true]));
+  const [error, setError] = useState(false);
+  const { isCopied, copyToClipboard } = useCopy();
+  const rangeId = useId();
+  const count = enabled.filter(Boolean).length;
+  const level = calculateStrength(password).level;
+  const strength = t("generator.strength." + (level === "medium" ? "fair" : level));
+  const update = (nextLength: number, nextEnabled: boolean[]) => {
+    setLength(nextLength);
+    setEnabled(nextEnabled);
+    setError(false);
+    setPassword(generate(nextLength, nextEnabled));
   };
-
-  const getPasswordStrength = (password: string) => {
-    if (!password) return { label: "", color: "" };
-    
-    let strength = 0;
-    if (password.length >= 12) strength++;
-    if (password.length >= 16) strength++;
-    if (/[a-z]/.test(password)) strength++;
-    if (/[A-Z]/.test(password)) strength++;
-    if (/[0-9]/.test(password)) strength++;
-    if (/[^a-zA-Z0-9]/.test(password)) strength++;
-
-    if (strength <= 2) return { label: t("generator.strength.weak"), color: "#ff4444" };
-    if (strength <= 4) return { label: t("generator.strength.fair"), color: "#ffaa00" };
-    return { label: t("generator.strength.strong"), color: "#00aa00" };
-  };
-
-  const strength = getPasswordStrength(generatedPassword);
-
   return (
-    <div className="password-generator">
-      <h3>🎲 {t("generator.title")}</h3>
-
-      <div className="generator-options">
-        <div className="option-group">
-          <label>
-            {t("generator.length")}: {length}
-            <input
-              type="range"
-              min="8"
-              max="32"
-              value={length}
-              onChange={(e) => setLength(Number(e.target.value))}
-            />
-          </label>
+    <div className={'gen-workbench' + (onGenerate ? ' gen-inline' : '')}>
+      <div className="gen-output">
+        <div className="gen-output-head"><span className="tool-caption"><Icon name="key" size={14} />{t("generator.passwordGenerated")}</span>
+          <span className="gen-length-label">{t("generator.strength.label")} · {strength}</span>
         </div>
-
-        <div className="option-checkboxes">
-          <label>
-            <input
-              type="checkbox"
-              checked={includeUppercase}
-              onChange={(e) => setIncludeUppercase(e.target.checked)}
-            />
-            {t("generator.includeUppercase")} (A-Z)
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={includeLowercase}
-              onChange={(e) => setIncludeLowercase(e.target.checked)}
-            />
-            {t("generator.includeLowercase")} (a-z)
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={includeNumbers}
-              onChange={(e) => setIncludeNumbers(e.target.checked)}
-            />
-            {t("generator.includeNumbers")} (0-9)
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={includeSymbols}
-              onChange={(e) => setIncludeSymbols(e.target.checked)}
-            />
-            {t("generator.includeSymbols")} (!@#$...)
-          </label>
+        <code className="gen-secret" dir="ltr">{password}</code>
+        <div className="gen-commands">
+          <button type="button" className="tool-btn tool-accent" onClick={async () => {
+            if (onGenerate) return onGenerate(password);
+            try { await copyToClipboard(password, password); setError(false); } catch { setError(true); }
+          }}>
+            <Icon name={onGenerate ? "key" : isCopied(password) ? "check" : "copy"} size={16} />
+            {onGenerate ? label("使用此密码", "Use this password") : isCopied(password) ? t("generator.passwordCopied") : label("复制密码", "Copy password")}
+          </button>
+          <button type="button" className="tool-btn" onClick={() => update(length, enabled)}><Icon name="refresh" size={16} />{label("重新生成", "Regenerate")}</button>
         </div>
+        {error && <p className="tool-notice" role="alert">{label("未能复制，请选择密码手动复制。", "Copy failed. Select the password to copy it manually.")}</p>}
       </div>
-
-      <div className="generator-actions">
-        <button
-          type="button"
-          onClick={generatePassword}
-          className="generate-button"
-        >
-          {t("generator.generate")}
-        </button>
-      </div>
-
-      {generatedPassword && (
-        <div className="generated-result">
-          <div className="password-display">
-            <div className="password-row">
-              <code className="password-code">{generatedPassword}</code>
-              <button
-                type="button"
-                onClick={handleCopy}
-                className={`copy-button ${isCopied("generated-password") ? "copied" : ""}`}
-                title={t("generator.copy")}
-              >
-                {isCopied("generated-password") ? "✓ " + t("generator.passwordCopied") : "📋 " + t("generator.copy")}
-              </button>
-            </div>
-            {strength.label && (
-              <span
-                className="strength-indicator"
-                style={{ color: strength.color }}
-              >
-                {t("generator.strength.label")}: {strength.label}
-              </span>
-            )}
-          </div>
+      <div className="gen-settings">
+        <div className="gen-range">
+          <label htmlFor={rangeId}>{label("密码长度", "Password length")}<output htmlFor={rangeId}>{length}</output></label>
+          <input id={rangeId} type="range" min="8" max="64" value={length} onChange={e => update(Number(e.target.value), enabled)} />
+          <div className="gen-bounds" aria-hidden="true"><span>8</span><span>64</span></div>
         </div>
-      )}
+        <fieldset className="gen-classes"><legend>{label("字符类型", "Character types")}</legend>
+          {sets.map(([, sample, zh, en], i) => (
+            <label className="gen-class" key={sample}>
+              <input type="checkbox" checked={enabled[i]} disabled={enabled[i] && count === 1}
+                onChange={e => update(length, enabled.map((on, index) => index === i ? e.target.checked : on))} />
+              <span>{label(zh, en)}</span><small aria-hidden="true">{sample}</small>
+            </label>
+          ))}
+        </fieldset>
+      </div>
     </div>
   );
 }
-
-export default PasswordGenerator;
-

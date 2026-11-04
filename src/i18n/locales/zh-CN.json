@@ -1,4 +1,5 @@
 {
+  "workspace": { "lockFailed": "锁定失败，请重试。" },
   "app": {
     "title": "2Pass 密码管理器"
   },

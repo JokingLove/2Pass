@@ -1,0 +1,12 @@
+/* Each swatch has a readable light and dark ink. A shape and a label accompany the color. */
+[data-identity-tone="graphite"] { --tone-light:#e4e5e7; --tone-dark:#36373b; --tone-ink:#404349; --tone-pale:#d6d7db; --tone-dot:#757982; }
+[data-identity-tone="denim"] { --tone-light:#dde6ef; --tone-dark:#303d4a; --tone-ink:#334e68; --tone-pale:#c7d9eb; --tone-dot:#667e9a; }
+[data-identity-tone="lilac"] { --tone-light:#e8e2ee; --tone-dark:#3e3549; --tone-ink:#594764; --tone-pale:#ded0e8; --tone-dot:#8c7699; }
+[data-identity-tone="rosewood"] { --tone-light:#eddedf; --tone-dark:#493639; --tone-ink:#64464d; --tone-pale:#efd0d5; --tone-dot:#a27a83; }
+[data-identity-tone="clay"] { --tone-light:#eee1d9; --tone-dark:#493a33; --tone-ink:#694c3b; --tone-pale:#ebd3c4; --tone-dot:#a78370; }
+[data-identity-tone="sand"] { --tone-light:#ebe5d4; --tone-dark:#443f31; --tone-ink:#605337; --tone-pale:#e5dabe; --tone-dot:#99875c; }
+[data-identity-tone] { --identity-bg: var(--tone-light); --identity-ink: var(--tone-ink); --identity-dot: var(--tone-dot); --identity-border: color-mix(in srgb,var(--identity-dot) 44%,var(--identity-bg)); }
+:root:is([data-theme="slate"],[data-theme="gold"]) [data-identity-tone] {
+  --identity-bg:var(--tone-dark); --identity-ink:var(--tone-pale);
+  --identity-dot:color-mix(in srgb,var(--tone-dot) 75%,var(--tone-pale));
+}

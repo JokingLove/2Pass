@@ -1,0 +1,53 @@
+.vault-service-mark[data-identity-tone] {
+  --mark-bg: var(--identity-bg);
+  --mark-ink: var(--identity-ink);
+  border-color: var(--identity-border);
+}
+.identity-tag[data-identity-tone] {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 2px 7px;
+  border: 1px solid var(--identity-border);
+  border-radius: 999px;
+  background: var(--identity-bg);
+  color: var(--identity-ink);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+.identity-tag[data-identity-tone] > i {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--identity-dot);
+}
+.identity-tag-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+button.identity-tag:hover { border-color: var(--identity-dot); }
+.entry-group-select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.entry-group-symbol {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--identity-border, var(--border-light));
+  border-radius: 7px;
+  background: var(--identity-bg, var(--bg-tertiary));
+  color: var(--identity-ink, var(--text-secondary));
+}
+.entry-group-select select { min-width: 0; flex: 1; }

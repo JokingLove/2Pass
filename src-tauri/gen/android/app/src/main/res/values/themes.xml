@@ -1,6 +1,10 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Theme.pass" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.PassBase" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="android:windowBackground">@drawable/launch_background</item>
+        <item name="android:statusBarColor">@color/launch_surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="colorAccent">@color/ic_launcher_background</item>
     </style>
+    <style name="Theme.pass" parent="Theme.PassBase"/>
 </resources>
